@@ -18,8 +18,8 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
-# $Revision: 669 $
-# $Date: 2013-05-07 20:02:15 +0200 (Tue, 07 May 2013) $
+# $Revision: 697 $
+# $Date: 2013-05-28 22:22:59 +0200 (Tue, 28 May 2013) $
 #
 
 
@@ -47,6 +47,7 @@ except ImportError:
 
 # Exit codes used by NZBGet
 POSTPROCESS_SUCCESS=93
+POSTPROCESS_NONE=95
 POSTPROCESS_ERROR=94
 
 # Check if the script is called from nzbget 11.0 or later
@@ -54,6 +55,10 @@ if not 'NZBOP_SCRIPTDIR' in os.environ:
 	print('*** NZBGet post-processing script ***')
 	print('This script is supposed to be called from nzbget (11.0 or later).')
 	sys.exit(POSTPROCESS_ERROR)
+
+if not os.path.exists(os.environ['NZBPP_DIRECTORY']):
+	print('Destination directory doesn\'t exist, exiting')
+	sys.exit(POSTPROCESS_NONE)
 
 # To get the post-processing log we connect to NZBGet via XML-RPC
 # and call method "postqueue", which returns the list of post-processing job.

@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 683 $
- * $Date: 2013-05-16 22:54:13 +0200 (Thu, 16 May 2013) $
+ * $Revision: 698 $
+ * $Date: 2013-06-02 21:20:31 +0200 (Sun, 02 Jun 2013) $
  *
  */
 
@@ -986,7 +986,7 @@ ul.help > li {
 }
 
 /* Make "select files" native control invisible */
-#AddDialog_Input {
+.hidden-file-input {
 	position: absolute;
 	left: 0;
 	top: 0;
