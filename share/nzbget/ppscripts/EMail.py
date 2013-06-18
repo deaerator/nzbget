@@ -18,8 +18,8 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
-# $Revision: 669 $
-# $Date: 2013-05-07 20:02:15 +0200 (Tue, 07 May 2013) $
+# $Revision: 707 $
+# $Date: 2013-06-12 22:25:06 +0200 (Wed, 12 Jun 2013) $
 #
 
 
@@ -165,12 +165,13 @@ if os.environ['NZBPO_POSTPROCESSLOG'] == 'Always' or \
 	# environment variables.
 	host = os.environ['NZBOP_CONTROLIP'];
 	port = os.environ['NZBOP_CONTROLPORT'];
+	username = os.environ['NZBOP_CONTROLUSERNAME'];
 	password = os.environ['NZBOP_CONTROLPASSWORD'];
 	
 	if host == '0.0.0.0': host = '127.0.0.1'
 	
 	# Build an URL for XML-RPC requests
-	rpcUrl = 'http://nzbget:%s@%s:%s/xmlrpc' % (password, host, port);
+	rpcUrl = 'http://%s:%s@%s:%s/xmlrpc' % (username, password, host, port);
 	
 	# Create remote server object
 	server = ServerProxy(rpcUrl)
