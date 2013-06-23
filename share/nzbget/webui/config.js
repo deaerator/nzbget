@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 701 $
- * $Date: 2013-06-03 22:35:18 +0200 (Mo, 03 Jun 2013) $
+ * $Revision: 714 $
+ * $Date: 2013-06-19 20:24:50 +0200 (Wed, 19 Jun 2013) $
  *
  */
 
@@ -554,6 +554,11 @@ var Config = (new function($)
 	{
 		$('#ConfigLoadInfo').hide();
 		$('#ConfigLoadServerTemplateError').show();
+		var optConfigTemplate = Options.option('ConfigTemplate');
+		$('#ConfigLoadServerTemplateErrorEmpty').toggle(optConfigTemplate === '');
+		$('#ConfigLoadServerTemplateErrorNotFound').toggle(optConfigTemplate !== '');
+		$('#ConfigLoadServerTemplateErrorWebDir').text(Options.option('WebDir'));
+		$('#ConfigLoadServerTemplateErrorConfigFile').text(Options.option('ConfigFile'));
 	}
 
 	function findOptionByName(name)
