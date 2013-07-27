@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 698 $
- * $Date: 2013-06-02 21:20:31 +0200 (Sun, 02 Jun 2013) $
+ * $Revision: 757 $
+ * $Date: 2013-07-25 22:13:26 +0200 (Thu, 25 Jul 2013) $
  *
  */
 
@@ -64,20 +64,22 @@ body.navfixed.scrolled .navbar-fixed-top .navbar-inner {
 	float: left;
 	margin-top: 1px;
 	margin-right: 5px;
-	width: 39px;
+	width: 88px;
 	height: 36px;
 	cursor: pointer;
+	opacity: 1;
 }
 
+#Logo i,
 #Logo i:hover {
 	opacity: 1;
 	filter: alpha(opacity=100);
 }
 
 .img-logo {
-	background-position: -48px -80px;
-	width: 39px;
-	height: 36px;
+	background-position: -8px -139px;
+	width: 88px;
+	height: 38px;
 	display: inline-block;
 }
 
@@ -399,6 +401,20 @@ body.navfixed.scrolled .navbar-fixed-top .navbar-inner {
 	min-width: 215px;
 }
 
+#RssMenu {
+	max-width: 300px;
+	overflow: hidden;
+}
+
+#DownloadsEdit_ActionsMenu,
+#HistoryEdit_ActionsMenu {
+	min-width: 120px;
+}
+
+ul.dropdown-menu > li > a > i {
+	margin-right: 5px;
+}
+
 /* BEGIN: Icons */
 [class^="icon-"],
 [class*=" icon-"],
@@ -414,9 +430,9 @@ body.navfixed.scrolled .navbar-fixed-top .navbar-inner {
 	[class^="img-"],
 	[class*=" img-"] {
 		background-image: url("./img/icons-2x.png");
-		-webkit-background-size: 512px 200px;
-		-moz-background-size: 512px 200px;
-		background-size: 512px 200px;
+		-webkit-background-size: 700px 300px;
+		-moz-background-size: 700px 300px;
+		background-size: 700px 300px;
 	}
 }
 
@@ -429,8 +445,16 @@ body.navfixed.scrolled .navbar-fixed-top .navbar-inner {
 	line-height: 16px;
 }
 
+.icon-empty {
+	background-position: -1000px -1000px;
+}
+
 .icon-plus {
 	background-position: -16px -16px;
+}
+
+.icon-minus {
+	background-position: -368px -112px;
 }
 
 .icon-remove-white {
@@ -530,6 +554,10 @@ body.navfixed.scrolled .navbar-fixed-top .navbar-inner {
 	background-position: -304px -48px;
 }
 
+.icon-rss {
+	background-position: -304px -112px;
+}
+
 .icon-trash-white {
 	background-position: -336px -48px;
 }
@@ -565,6 +593,23 @@ body.navfixed.scrolled .navbar-fixed-top .navbar-inner {
 .img-checkminus {
 	background-position: -400px -16px;
 }
+
+.icon-postcard {
+	background-position: -432px -112px;
+}
+
+.icon-link {
+	background-position: -400px -112px;
+}
+
+.icon-alert {
+	background-position: -336px -112px;
+}
+
+.icon-process {
+	background-position: -304px -144px;
+}
+
 /* END: Icons */
 
 .btn-toolbar {
@@ -680,7 +725,8 @@ form {
 }
 
 #DownloadsEdit_FileTable_filter,
-#DownloadsEdit_LogTable_filter {
+#DownloadsEdit_LogTable_filter,
+#FeedDialog_ItemTable_filter {
 	width: 180px;
 }
 
@@ -699,6 +745,40 @@ form {
 	left: 50%;
 }
 
+.modal-body {
+  max-height: 360px;
+}
+
+.modal-max {
+	margin: 15px;
+	left: 0;
+	top: 0;
+	bottom: 0;
+	right: 0;
+	width: auto;
+	height: auto;
+}
+
+.modal-max .modal-body {
+	position: absolute;
+	left: 0;
+	right: 0;
+	max-height: inherit;
+	/* top: 46px;      // must be calculated at runtime */
+	/* bottom: 58px;   // must be calculated at runtime */
+}
+
+.modal-max .modal-inner-scroll {
+	top: 54px;
+}
+
+.modal-max .modal-footer {
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+}
+
 .modal-inner-scroll {
 	bottom: 0;
 	left: 15px;
@@ -706,6 +786,16 @@ form {
 	position: absolute;
 	right: 0;
 	padding-right: 15px;
+}
+
+.modal-inner-scroll .toolbox-info {
+	margin-bottom: 10px;
+}
+
+.badge-primary {
+    background-color: #FFFFFF;
+    color: #000000;
+    text-shadow: none;
 }
 
 /* BEGIN: Tables */
@@ -731,7 +821,7 @@ td.text-center,th.text-center {
   background-color: #f5f5f5;
 }
 
-.table th, .table  td {
+.table th, .table td {
 	padding: 5px;
 }
 
@@ -779,7 +869,7 @@ table.table-cancheck tr.checkremove div.img-check {
 }
 
 tr.checked,
-tr.checked  td {
+tr.checked td {
 	background-color: #FFFFE1;
 }
 
@@ -790,6 +880,17 @@ tr.checked  td {
 .table tbody tr.checked:hover,
 .table tbody tr.checked:hover td {
 	background-color: #FFFFCC;
+}
+
+.check-simple tr.checked,
+.check-simple tr.checked td,
+.table-striped.check-simple tbody tr.checked:nth-child(odd) td {
+	background-color: inherit;
+}
+
+.table.check-simple tbody tr.checked:hover,
+.table.check-simple tbody tr.checked:hover td {
+  background-color: #f5f5f5;
 }
 
 table.table-hidecheck thead > tr > th:first-child,
@@ -926,6 +1027,10 @@ table.table-hidecheck tbody > tr > td:first-child {
 	margin-top: 3px;
 }
 
+.modal .input-medium {
+	width: 200px;
+}
+
 .modal .input-xlarge {
 	width: 350px;
 }
@@ -964,9 +1069,14 @@ table.table-hidecheck tbody > tr > td:first-child {
   margin-left:-200px;
 }
 
-.modal-mini .modal-body {
-  padding-left: 40px;
-  padding-right: 40px;
+.modal-small {
+  width: 480px;
+  margin-left:-240px;
+}
+
+.modal-padded-small .modal-body {
+  padding-left: 25px;
+  padding-right: 25px;
 }
 
 .modal-padded .modal-body {
@@ -1094,6 +1204,10 @@ ul.help > li {
 	min-width: 10px;
 	right: 0;
 	left: auto;
+}
+
+.footer-button-menu {
+	text-align: left;
 }
 
 .data-statistics {
@@ -1237,6 +1351,10 @@ div.ConfigFooter {
 	padding-bottom: 12px;
 }
 
+div.control-group.last-group {
+	margin-bottom: 0;
+}
+
 #ConfigContent div.control-group.last-group,
 #ConfigContent.search div.control-group.last-group.multiset {
 	border-bottom: none;
@@ -1291,6 +1409,10 @@ div.ConfigFooter {
 	cursor: pointer;
 	text-decoration: underline;
 	color: #005580;
+}
+
+.config-previewfeed {
+	margin-left: 15px;
 }
 
 #ScriptListDialog_ScriptTable td:nth-child(2) {
@@ -1789,10 +1911,25 @@ body.phone,
 	text-align: center;
 }
 
-.phone .modal-mini .modal-body,
-.phone .modal-padded .modal-body {
+.phone .modal-padded .modal-body,
+.phone .modal-padded-small .modal-body {
   padding-left: 15px;
   padding-right: 15px;
+}
+
+.phone .modal-max .modal-body {
+	position: static;
+}
+
+.phone .modal-max .modal-footer {
+	position: static;
+}
+
+.phone .modal-max .modal-inner-scroll {
+	position: static;
+	top: inherit;
+	left: 0;
+	padding-right: 0;
 }
 
 .phone .data-statistics {
@@ -1884,7 +2021,7 @@ body.phone,
 		width: 95%;
 	}
 
-	.modal-body {
+	.modal-body	{
 		max-height: none;
 	}
 

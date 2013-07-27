@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 710 $
- * $Date: 2013-06-16 15:00:57 +0200 (Sun, 16 Jun 2013) $
+ * $Revision: 742 $
+ * $Date: 2013-07-18 21:21:38 +0200 (Thu, 18 Jul 2013) $
  *
  */
 
@@ -172,9 +172,12 @@ var Upload = (new function($)
 	{
 		var inp = $('#AddDialog_Input');
 
-		// Reset file input control (needed for IE10)
-		inp.wrap('<form>').closest('form').get(0).reset();
-		inp.unwrap();
+		// Reset file input control; needed for IE10 but produce problems with opera (the old non-webkit one).
+		if ($.browser.msie)
+		{
+			inp.wrap('<form>').closest('form').get(0).reset();
+			inp.unwrap();
+		}
 		
 		inp.click();
 	}
