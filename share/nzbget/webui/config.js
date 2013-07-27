@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 716 $
- * $Date: 2013-06-26 22:52:10 +0200 (Wed, 26 Jun 2013) $
+ * $Revision: 747 $
+ * $Date: 2013-07-22 22:38:21 +0200 (Mon, 22 Jul 2013) $
  *
  */
 
@@ -574,8 +574,9 @@ var Config = (new function($)
 				for (var j=0; j < section.options.length; j++)
 				{
 					var option = section.options[j];
-					if ((option.Name && option.Name.toLowerCase() === name) ||
-						(option.name && option.name.toLowerCase() === name))
+					if (!option.template &&
+						((option.Name && option.Name.toLowerCase() === name) ||
+						 (option.name && option.name.toLowerCase() === name)))
 					{
 						return option;
 					}
@@ -788,14 +789,15 @@ var Config = (new function($)
 		{
 			var htmldescr = option.description;
 			htmldescr = htmldescr.replace(/NOTE: do not forget to uncomment the next line.\n/, '');
-			htmldescr = htmldescr.replace(/\</g, 'OPENTAG');
-			htmldescr = htmldescr.replace(/\>/g, 'CLOSETAG');
-			htmldescr = htmldescr.replace(/OPENTAG/g, '<a class="option" href="#" onclick="Config.scrollToOption(event, this)">');
-			htmldescr = htmldescr.replace(/CLOSETAG/g, '</a>');
+
+			// replace option references
+			var exp = /\<([A-Z0-9]*)\>/ig;
+			htmldescr = htmldescr.replace(exp, '<a class="option" href="#" onclick="Config.scrollToOption(event, this)">$1</a>');
+
 			htmldescr = htmldescr.replace(/&/g, '&amp;');
 
 			// replace URLs
-			var exp = /(http:\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
+			exp = /(http:\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
 			htmldescr = htmldescr.replace(exp, "<a href='$1'>$1</a>");
 
 			// highlight first line
@@ -812,6 +814,12 @@ var Config = (new function($)
 				htmldescr += '</span>';
 			}
 
+			if (htmldescr.indexOf('MORE INFO:') > -1)
+			{
+				htmldescr = htmldescr.replace(/MORE INFO:<br>/g, '<input class="btn btn-mini" value="Show more info" type="button" onclick="Config.showSpoiler(this)"><span class="hide">');
+				htmldescr += '</span>';
+			}
+			
 			if (section.multi)
 			{
 				// replace strings like "TaskX.Command" and "Task1.Command"
@@ -846,6 +854,11 @@ var Config = (new function($)
 			html += '<div class="' + section.id + ' multiid' + multiid + ' multiset">';
 			html += '<button type="button" class="btn config-delete" data-multiid="' + multiid + ' multiset" ' +
 				'onclick="Config.deleteSet(this, \'' + setname + '\',\'' + section.id + '\')">Delete ' + setname + multiid + '</button>';
+			if (setname.toLowerCase() === 'feed')
+			{
+				html += ' <button type="button" class="btn config-previewfeed config-feed" data-multiid="' + multiid + ' multiset" ' +
+					'onclick="Config.previewFeed(this, \'' + setname + '\',\'' + section.id + '\')">Preview Feed</button>';
+			}
 			html += '<hr>';
 			html += '</div>';
 		}
@@ -1141,6 +1154,7 @@ var Config = (new function($)
 					$('.config-settitle.' + section.id + '.multiid' + oldMultiId, $ConfigData).text(setname + newMultiId);
 					$('.' + section.id + '.multiid' + oldMultiId + ' .config-multicaption', $ConfigData).text(setname + newMultiId + '.');
 					$('.' + section.id + '.multiid' + oldMultiId + ' .config-delete', $ConfigData).text('Delete ' + setname + newMultiId).attr('data-multiid', newMultiId);
+					$('.' + section.id + '.multiid' + oldMultiId + ' .config-feed', $ConfigData).attr('data-multiid', newMultiId);
 
 					//update class
 					$('.' + section.id + '.multiid' + oldMultiId, $ConfigData).removeClass('multiid' + oldMultiId).addClass('multiid' + newMultiId);
@@ -1232,6 +1246,19 @@ var Config = (new function($)
 		ScriptListDialog.showModal(option, config);
 	}
 
+	/*** RSS FEEDS ********************************************************************/
+
+	this.previewFeed = function(control, setname, sectionId)
+	{
+		var multiid = parseInt($(control).attr('data-multiid'));
+		FeedDialog.showModal(0, 
+			getOptionValue(findOptionByName('Feed' + multiid + '.Name')),
+			getOptionValue(findOptionByName('Feed' + multiid + '.URL')),
+			getOptionValue(findOptionByName('Feed' + multiid + '.Filter')),
+			getOptionValue(findOptionByName('Feed' + multiid + '.Category')),
+			getOptionValue(findOptionByName('Feed' + multiid + '.Priority')));
+	}
+
 	/*** SAVE ********************************************************************/
 
 	function getOptionValue(option)
@@ -1318,7 +1345,6 @@ var Config = (new function($)
 		showSaveBanner();
 
 		Util.show('#ConfigSaved_Reload, #ConfigReload', serverSaveRequest.length > 0);
-		Util.show('#ConfigClose, #ConfigSaved_Close', serverSaveRequest.length === 0);
 
 		if (serverSaveRequest.length > 0)
 		{
@@ -1348,11 +1374,6 @@ var Config = (new function($)
 		{
 			Notification.show('#Notif_Config_Failed');
 		}
-	}
-
-	this.close = function()
-	{
-		$('#DownloadsTabLink').tab('show');
 	}
 
 	this.scrollToOption = function(event, control)
@@ -1996,7 +2017,7 @@ var ConfigBackupRestore = (new function($)
 				removeValue(option.name);
 				addValue(option.name);
 			}
-			else if (!option.template && option.multiid === 1)
+			else if (option.template)
 			{
 				// delete all multi-options
 				for (var j=1; ; j++)

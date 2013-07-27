@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 689 $
- * $Date: 2013-05-21 22:41:08 +0200 (Tue, 21 May 2013) $
+ * $Revision: 722 $
+ * $Date: 2013-07-14 00:00:49 +0200 (Sun, 14 Jul 2013) $
  *
  */
 
@@ -243,8 +243,25 @@ var TabDialog = (new function($)
 	{
 		dialog.restoreTab = restoreTab;
 		dialog.switchTab = switchTab;
+		dialog.maximize = maximize;
 	}
 	
+	function maximize(options)
+	{
+		var bodyPadding = 15;
+		var dialog = this;
+		var body = $('.modal-body', dialog);
+		var footer = $('.modal-footer', dialog);
+		var header = $('.modal-header', dialog);
+		body.css({top: header.outerHeight(), bottom: footer.outerHeight()});
+		if (options.mini)
+		{
+			var scrollheader = $('.modal-scrollheader', dialog);
+			var scroll = $('.modal-inner-scroll', dialog);
+			scroll.css('min-height', dialog.height() - header.outerHeight() - footer.outerHeight() - scrollheader.height() - bodyPadding*2);
+		}
+	}
+
 	function restoreTab()
 	{
 		var dialog = this;
