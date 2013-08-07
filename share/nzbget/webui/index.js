@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 754 $
- * $Date: 2013-07-25 20:25:13 +0200 (Thu, 25 Jul 2013) $
+ * $Revision: 775 $
+ * $Date: 2013-08-05 20:09:10 +0200 (Mon, 05 Aug 2013) $
  *
  */
 
@@ -157,6 +157,7 @@ var Frontend = (new function($)
 		Upload.init();
 		Feeds.init();
 		FeedDialog.init();
+		FeedFilterDialog.init();
 		Config.init({ updateTabInfo: updateTabInfo });
 		ConfigBackupRestore.init();
 		ConfirmDialog.init();
@@ -251,6 +252,13 @@ var Frontend = (new function($)
 	{
 		var tabname = $(e.target).attr('href');
 		tabname = tabname.substr(1, tabname.length - 4);
+
+		if ($('#ConfigTab').hasClass('active') && !Config.canLeaveTab(e.target))
+		{
+			e.preventDefault();
+			return;
+		}
+
 		$('#SearchBlock .search-query, #SearchBlock .search-clear').hide();
 		$('#' + tabname + 'Table_filter, #' + tabname + 'Table_clearfilter').show();
 	}

@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 754 $
- * $Date: 2013-07-25 20:25:13 +0200 (Thu, 25 Jul 2013) $
+ * $Revision: 765 $
+ * $Date: 2013-07-28 23:27:12 +0200 (Sun, 28 Jul 2013) $
  *
  */
 
@@ -1302,8 +1302,8 @@ var HistoryEditDialog = (new function()
 		}
 
 		$('#HistoryEdit_Status').html(status);
-		$('#HistoryEdit_Category').text(hist.Category !== '' ? hist.Category : '<empty>');
-		$('#HistoryEdit_Path').text(hist.DestDir);
+		$('#HistoryEdit_Category').text(hist.Category);
+		$('#HistoryEdit_Path').text(hist.FinalDir !== '' ? hist.FinalDir.replace(':', ' | ') : hist.DestDir);
 
 		var size = Util.formatSizeMB(hist.FileSizeMB, hist.FileSizeLo);
 

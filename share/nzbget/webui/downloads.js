@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 671 $
- * $Date: 2013-05-08 23:50:47 +0200 (Wed, 08 May 2013) $
+ * $Revision: 768 $
+ * $Date: 2013-08-02 18:46:24 +0200 (Fri, 02 Aug 2013) $
  *
  */
 
@@ -531,11 +531,11 @@ var DownloadsUI = (new function($)
 	this.fillPriorityCombo = function(combo)
 	{
 		combo.empty();
-		combo.append('<option value="-100">very low</option>');
-		combo.append('<option value="-50">low</option>');
-		combo.append('<option value="0">normal</option>');
-		combo.append('<option value="50">high</option>');
 		combo.append('<option value="100">very high</option>');
+		combo.append('<option value="50">high</option>');
+		combo.append('<option value="0">normal</option>');
+		combo.append('<option value="-50">low</option>');
+		combo.append('<option value="-100">very low</option>');
 	}
 
 	this.fillCategoryCombo = function(combo)
