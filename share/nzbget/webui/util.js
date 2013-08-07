@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 722 $
- * $Date: 2013-07-14 00:00:49 +0200 (Sun, 14 Jul 2013) $
+ * $Revision: 775 $
+ * $Date: 2013-08-05 20:09:10 +0200 (Mon, 05 Aug 2013) $
  *
  */
 
@@ -221,7 +221,7 @@ var Util = (new function($)
 		var $elem = $(dialog);
 		if (center)
 		{
-			var top = ($(window).height() - $elem.outerHeight())/2;
+			var top = ($(window).height() - $elem.outerHeight()) * 0.4;
 			top = top > 0 ? top : 0;
 			$elem.css({ top: top});
 		}

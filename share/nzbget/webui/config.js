@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 747 $
- * $Date: 2013-07-22 22:38:21 +0200 (Mon, 22 Jul 2013) $
+ * $Revision: 775 $
+ * $Date: 2013-08-05 20:09:10 +0200 (Mon, 05 Aug 2013) $
  *
  */
 
@@ -465,16 +465,21 @@ var Config = (new function($)
 	var $ConfigInfo;
 	var $ConfigTitle;
 	var $ConfigTable;
+	var $ViewButton;
+	var $LeaveConfigDialog;
 	var $Body;
 
 	// State
-	var config;
+	var config = null;
 	var values;
 	var filterText = '';
 	var lastSection;
 	var reloadTime;
 	var updateTabInfo;
 	var restored = false;
+	var compactMode = false;
+	var configSaved = false;
+	var leaveTarget;
 
 	this.init = function(options)
 	{
@@ -488,9 +493,15 @@ var Config = (new function($)
 		$ConfigContent = $('#ConfigContent');
 		$ConfigInfo = $('#ConfigInfo');
 		$ConfigTitle = $('#ConfigTitle');
+		$ViewButton = $('#Config_ViewButton');
+		$LeaveConfigDialog = $('#LeaveConfigDialog');
 
 		Util.show('#ConfigBackupSafariNote', $.browser.safari);
 		$('#ConfigTable_filter').val('');
+		compactMode = UISettings.read('$Config_ViewCompact', 'no') == 'yes';
+		setViewMode();
+		
+		$(window).bind('beforeunload', userLeavesPage);
 
 		$('#ConfigTabLink').on('show', show);
 		$('#ConfigTabLink').on('shown', shown);
@@ -528,6 +539,7 @@ var Config = (new function($)
 		$('#ConfigLoadServerTemplateError').hide();
 		$('#ConfigLoadError').hide();
 		$ConfigContent.hide();
+		configSaved = false;
 	}
 
 	function shown()
@@ -819,7 +831,7 @@ var Config = (new function($)
 				htmldescr = htmldescr.replace(/MORE INFO:<br>/g, '<input class="btn btn-mini" value="Show more info" type="button" onclick="Config.showSpoiler(this)"><span class="hide">');
 				htmldescr += '</span>';
 			}
-			
+
 			if (section.multi)
 			{
 				// replace strings like "TaskX.Command" and "Task1.Command"
@@ -986,7 +998,7 @@ var Config = (new function($)
 			firstVisibleSection.options.unshift(option);
 		}
 
-		// register editors for options "DefScript" and "ScriptOrder"
+		// register editors for options "DefScript", "ScriptOrder" and FeedX.Filter
 		var conf = config[0];
 		for (var j=0; j < conf.sections.length; j++)
 		{
@@ -1002,6 +1014,10 @@ var Config = (new function($)
 				if (optname.indexOf('defscript') > -1)
 				{
 					option.editor = { caption: 'Choose', click: 'Config.editDefScript' };
+				}
+				if (optname.indexOf('.filter') > -1)
+				{
+					option.editor = { caption: 'Change', click: 'Config.editFilter' };
 				}
 			}
 		}
@@ -1053,6 +1069,7 @@ var Config = (new function($)
 		$('li', $ConfigNav).removeClass('active');
 		link.closest('li').addClass('active');
 		$ConfigContent.removeClass('search');
+		Util.show($ViewButton, sectionId !== 'Config-Info');
 
 		$ConfigInfo.hide();
 
@@ -1233,7 +1250,21 @@ var Config = (new function($)
 		});
 	}
 
+	this.viewMode = function()
+	{
+		compactMode = !compactMode;
+		UISettings.write('$Config_ViewCompact', compactMode ? 'yes' : 'no');
+		setViewMode();
+	}
+	
+	function setViewMode()
+	{
+		$('#Config_ViewCompact i').toggleClass('icon-ok', compactMode).toggleClass('icon-empty', !compactMode);
+		$ConfigContent.toggleClass('hide-help-block', compactMode);
+	}
+
 	/*** OPTION SPECIFIC EDITORS *************************************************/
+
 	this.editScriptOrder = function(optFormId)
 	{
 		var option = findOptionById(optFormId);
@@ -1248,13 +1279,31 @@ var Config = (new function($)
 
 	/*** RSS FEEDS ********************************************************************/
 
+	this.editFilter = function(optFormId)
+	{
+		var option = findOptionById(optFormId);
+		FeedFilterDialog.showModal(
+			getOptionValue(findOptionByName('Feed' + option.multiid + '.Name')),
+			getOptionValue(findOptionByName('Feed' + option.multiid + '.URL')),
+			getOptionValue(findOptionByName('Feed' + option.multiid + '.Filter')),
+			getOptionValue(findOptionByName('Feed' + option.multiid + '.PauseNzb')),
+			getOptionValue(findOptionByName('Feed' + option.multiid + '.Category')),
+			getOptionValue(findOptionByName('Feed' + option.multiid + '.Priority')),
+			function(filter)
+				{
+					var control = $('#' + option.formId);
+					control.val(filter);
+				});
+	}
+
 	this.previewFeed = function(control, setname, sectionId)
 	{
 		var multiid = parseInt($(control).attr('data-multiid'));
-		FeedDialog.showModal(0, 
+		FeedDialog.showModal(0,
 			getOptionValue(findOptionByName('Feed' + multiid + '.Name')),
 			getOptionValue(findOptionByName('Feed' + multiid + '.URL')),
 			getOptionValue(findOptionByName('Feed' + multiid + '.Filter')),
+			getOptionValue(findOptionByName('Feed' + multiid + '.PauseNzb')),
 			getOptionValue(findOptionByName('Feed' + multiid + '.Category')),
 			getOptionValue(findOptionByName('Feed' + multiid + '.Priority')));
 	}
@@ -1293,7 +1342,7 @@ var Config = (new function($)
 		return false;
 	}
 
-	function prepareSaveRequest()
+	function prepareSaveRequest(onlyUserChanges)
 	{
 		var modified = false;
 		var request = [];
@@ -1318,7 +1367,14 @@ var Config = (new function($)
 							}
 							if (newValue != null)
 							{
-								modified = modified || (oldValue != newValue) || (option.value === null);
+								if (onlyUserChanges)
+								{
+									modified = modified || (oldValue != newValue && oldValue !== null);
+								}
+								else
+								{
+									modified = modified || (oldValue != newValue) || (option.value === null);
+								}
 								var opt = {Name: option.name, Value: newValue};
 								request.push(opt);
 							}
@@ -1334,7 +1390,9 @@ var Config = (new function($)
 
 	this.saveChanges = function()
 	{
-		var serverSaveRequest = prepareSaveRequest();
+		$LeaveConfigDialog.modal('hide');
+		
+		var serverSaveRequest = prepareSaveRequest(false);
 
 		if (serverSaveRequest.length === 0)
 		{
@@ -1374,6 +1432,35 @@ var Config = (new function($)
 		{
 			Notification.show('#Notif_Config_Failed');
 		}
+		configSaved = true;
+	}
+	
+	this.canLeaveTab = function(target)
+	{
+		var serverSaveRequest = prepareSaveRequest(true);
+		if (serverSaveRequest.length === 0 || configSaved)
+		{
+			return true;
+		}
+
+		leaveTarget = target;
+		$LeaveConfigDialog.modal({backdrop: 'static'});
+		return false;
+	}
+	
+	function userLeavesPage(e)
+	{
+		if (config && !configSaved && !UISettings.connectionError && prepareSaveRequest(true).length > 0)
+		{
+			return "Discard changes?";
+		}
+	}
+	
+	this.discardChanges = function()
+	{
+		configSaved = true;
+		$LeaveConfigDialog.modal('hide');
+		leaveTarget.click();
 	}
 
 	this.scrollToOption = function(event, control)
@@ -1516,16 +1603,9 @@ var Config = (new function($)
 
 	/*** RELOAD ********************************************************************/
 
-	this.reloadConfirm = function()
-	{
-		ConfirmDialog.showModal('ReloadConfirmDialog', Config.reload);
-	}
-
-	this.reload = function()
+	function restart(callback)
 	{
 		Refresher.pause();
-
-		$('#ConfigReloadAction').text('Stopping all activities and reloading...');
 		$('#ConfigReloadInfoNotes').hide();
 
 		$('body').fadeOut(function()
@@ -1536,8 +1616,19 @@ var Config = (new function($)
 			$('body').show();
 			$('#ConfigReloadInfo').fadeIn();
 			reloadTime = new Date();
-			RPC.call('reload', [], reloadCheckStatus);
+			callback();
 		});
+	}
+
+	this.reloadConfirm = function()
+	{
+		ConfirmDialog.showModal('ReloadConfirmDialog', Config.reload);
+	}
+
+	this.reload = function()
+	{
+		$('#ConfigReloadAction').text('Stopping all activities and reloading...');
+		restart(function() { RPC.call('reload', [], reloadCheckStatus); });
 	}
 
 	function reloadCheckStatus()
@@ -1581,6 +1672,35 @@ var Config = (new function($)
 	{
 		Options.reloadConfig(values, buildPage);
 		restored = true;
+	}
+
+	/*** SHUTDOWN ********************************************************************/
+
+	this.shutdownConfirm = function()
+	{
+		ConfirmDialog.showModal('ShutdownConfirmDialog', Config.shutdown);
+	}
+
+	this.shutdown = function()
+	{
+		$('#ConfigReloadTitle').text('Shutdown NZBGet');
+		$('#ConfigReloadAction').text('Stopping all activities...');
+		restart(function() { RPC.call('shutdown', [], shutdownCheckStatus); });
+	}
+
+	function shutdownCheckStatus()
+	{
+		RPC.call('version', [], function(version)
+			{
+				// the program still runs, waiting 0.5 sec. and retrying
+				setTimeout(shutdownCheckStatus, 500);
+			},
+			function()
+			{
+				// the program has been stopped
+				$('#ConfigReloadTransmit').hide();
+				$('#ConfigReloadAction').text('The program has been stopped.');
+			});
 	}
 }(jQuery));
 
@@ -2039,7 +2159,7 @@ var ConfigBackupRestore = (new function($)
 				}
 			}
 		}
-		
+
 		for (var k=0; k < config.length; k++)
 		{
 			var conf = config[k];
