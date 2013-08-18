@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 683 $
- * $Date: 2013-05-16 22:54:13 +0200 (Thu, 16 May 2013) $
+ * $Revision: 780 $
+ * $Date: 2013-08-08 23:23:29 +0200 (Thu, 08 Aug 2013) $
  *
  */
 
@@ -89,6 +89,11 @@ var History = (new function($)
 
 	this.update = function()
 	{
+		if (!history)
+		{
+			$('#HistoryTable_Category').css('width', DownloadsUI.calcCategoryColumnWidth());
+		}
+
 		RPC.call('history', [], loaded);
 	}
 
@@ -111,13 +116,22 @@ var History = (new function($)
 	{
 		if (hist.Kind === 'NZB')
 		{
-			if (hist.ParStatus == 'FAILURE' || hist.UnpackStatus == 'FAILURE' || hist.MoveStatus == 'FAILURE' || hist.ScriptStatus == 'FAILURE')
+			if (hist.Deleted)
+			{
+				hist.status = hist.HealthDeleted ? 'failure' : 'deleted';
+			}
+			else if (hist.ParStatus == 'FAILURE' || hist.UnpackStatus == 'FAILURE' || hist.MoveStatus == 'FAILURE' || hist.ScriptStatus == 'FAILURE')
 			{
 				hist.status = 'failure';
 			}
 			else if (hist.ParStatus == 'MANUAL')
 			{
 				hist.status = 'damaged';
+			}
+			else if (hist.ParStatus == 'NONE' && hist.UnpackStatus == 'NONE')
+			{
+				hist.status = hist.Health === 1000 ? 'success' : 
+					hist.Health >= hist.CriticalHealth ? 'damaged' : 'failure';
 			}
 			else
 			{
@@ -347,6 +361,8 @@ var HistoryUI = (new function($)
 			case 'failure':
 			case 'FAILURE':
 				return '<span class="label label-status label-important">' + prefix + 'failure</span>';
+			case 'aborted':
+				return '<span class="label label-status label-important">' + prefix + 'aborted</span>';
 			case 'unknown':
 			case 'UNKNOWN':
 				return '<span class="label label-status label-info">' + prefix + 'unknown</span>';
@@ -357,6 +373,9 @@ var HistoryUI = (new function($)
 			case 'MANUAL':
 			case 'damaged':
 				return '<span class="label label-status label-warning">' + prefix + status + '</span>';
+			case 'deleted':
+			case 'DELETED':
+				return '<span class="label label-status">' + prefix + 'deleted</span>';
 			case 'none':
 			case 'NONE':
 				return '<span class="label label-status">' + prefix + 'none</span>';
