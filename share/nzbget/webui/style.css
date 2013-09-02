@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 778 $
- * $Date: 2013-08-07 22:09:43 +0200 (Wed, 07 Aug 2013) $
+ * $Revision: 794 $
+ * $Date: 2013-08-16 23:53:32 +0200 (Fri, 16 Aug 2013) $
  *
  */
 
@@ -639,17 +639,25 @@ ul.dropdown-menu > li > a > i {
 	text-transform: uppercase;
 }
 
+
+.label-inline {
+	display: inline-block;
+	margin-bottom: -4px;
+	overflow-x: hidden;
+	text-overflow: ellipsis;
+}
+
 .controls .label-status {
 	line-height: 22px;
 }
 
 /* links in black color */
-.datatable a {
+.table a {
 	color: #000000;
 }
 
 /* links in black color */
-.datatable a:hover {
+.table a:hover {
 	color: #000000;
 }
 
@@ -689,6 +697,11 @@ div.toolbox-length select {
 
 .modal-tab .pagination {
 	margin-bottom: 10px;
+}
+
+.padded-tab {
+	padding-left: 20px;
+	padding-right: 20px;
 }
 
 h1 {
@@ -1233,8 +1246,12 @@ ul.help > li {
 	text-align: left;
 }
 
+.data-statistics-full {
+	width: 364px;
+}
+
 .data-statistics {
-	width: 280px;
+	width: 290px;
 }
 
 .modal-center {
@@ -1899,6 +1916,10 @@ body.phone,
 .phone .downloads-progresslabel {
 	margin-top: -8px;
 	margin-bottom: 10px;
+}
+
+.phone .label-inline {
+	display: inline;
 }
 
 /* CONTROLS AROUND DATATABLE */

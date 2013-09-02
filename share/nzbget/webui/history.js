@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 780 $
- * $Date: 2013-08-08 23:23:29 +0200 (Thu, 08 Aug 2013) $
+ * $Revision: 793 $
+ * $Date: 2013-08-15 19:21:01 +0200 (Thu, 15 Aug 2013) $
  *
  */
 
@@ -318,8 +318,10 @@ var History = (new function($)
 		}
 	}
 
-	function editClick()
+	function editClick(e)
 	{
+		e.preventDefault();
+
 		var histid = $(this).attr('histid');
 		$(this).blur();
 

@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 780 $
- * $Date: 2013-08-08 23:23:29 +0200 (Thu, 08 Aug 2013) $
+ * $Revision: 791 $
+ * $Date: 2013-08-14 23:10:02 +0200 (Wed, 14 Aug 2013) $
  *
  */
 
@@ -336,6 +336,11 @@ var Frontend = (new function($)
 		alignPopupMenu('#RssMenu', UISettings.miniTheme);
 
 		alignCenterDialogs();
+		
+		if (initialized)
+		{
+			Downloads.resize();
+		}
 	}
 
 	function alignPopupMenu(menu, center)
