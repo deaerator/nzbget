@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 778 $
- * $Date: 2013-08-07 22:09:43 +0200 (Wed, 07 Aug 2013) $
+ * $Revision: 799 $
+ * $Date: 2013-08-27 00:07:43 +0200 (Tue, 27 Aug 2013) $
  *
  */
 
@@ -774,7 +774,7 @@ var Config = (new function($)
 		}
 		else if (option.name.toLowerCase().indexOf('username') > -1 ||
 				option.name.toLowerCase().indexOf('password') > -1 ||
-				   option.name.indexOf('IP') > -1)
+				(option.name.indexOf('IP') > -1 && option.name.toLowerCase() !== 'authorizedip'))
 		{
 			option.type = 'text';
 			html += '<input type="text" id="' + option.formId + '" value="' + Util.textToAttr(value) + '" class="editsmall">';
@@ -1382,7 +1382,7 @@ var Config = (new function($)
 			}
 		}
 
-		return modified || invalidOptionsExist() || restored ? request : [];
+		return modified || (!onlyUserChanges && invalidOptionsExist()) || restored ? request : [];
 	}
 
 	this.saveChanges = function()

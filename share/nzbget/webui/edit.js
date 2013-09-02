@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 787 $
- * $Date: 2013-08-12 20:35:28 +0200 (Mon, 12 Aug 2013) $
+ * $Revision: 794 $
+ * $Date: 2013-08-16 23:53:32 +0200 (Fri, 16 Aug 2013) $
  *
  */
 
@@ -347,8 +347,9 @@ var DownloadsEditDialog = (new function($)
 		$('#DownloadsEdit_Transmit').hide();
 	}
 
-	function saveChanges()
+	function saveChanges(e)
 	{
+		e.preventDefault();
 		disableAllButtons();
 		notification = null;
 		saveName();
@@ -390,15 +391,17 @@ var DownloadsEditDialog = (new function($)
 			: saveParam();
 	}
 
-	function itemPause()
+	function itemPause(e)
 	{
+		e.preventDefault();
 		disableAllButtons();
 		notification = '#Notif_Downloads_Paused';
 		RPC.call('editqueue', ['GroupPause', 0, '', [curGroup.LastID]], completed);
 	}
 
-	function itemResume()
+	function itemResume(e)
 	{
+		e.preventDefault();
 		disableAllButtons();
 		notification = '#Notif_Downloads_Resumed';
 		RPC.call('editqueue', ['GroupResume', 0, '', [curGroup.LastID]], function()
@@ -414,8 +417,9 @@ var DownloadsEditDialog = (new function($)
 		});
 	}
 
-	function itemDelete()
+	function itemDelete(e)
 	{
+		e.preventDefault();
 		Util.show('#DownloadEditDeleteConfirmDialog_Cleanup', Options.option('DeleteCleanupDisk') === 'yes');
 		Util.show('#DownloadEditDeleteConfirmDialog_Remain', Options.option('DeleteCleanupDisk') != 'yes');
 		ConfirmDialog.showModal('DownloadEditDeleteConfirmDialog', doItemDelete);
@@ -428,8 +432,9 @@ var DownloadsEditDialog = (new function($)
 		RPC.call('editqueue', ['GroupDelete', 0, '', [curGroup.LastID]], completed);
 	}
 
-	function itemCancelPP()
+	function itemCancelPP(e)
 	{
+		e.preventDefault();
 		disableAllButtons();
 		notification = '#Notif_Downloads_PostCanceled';
 
@@ -1070,8 +1075,9 @@ var DownloadsMultiDialog = (new function($)
 		}, 500);
 	}
 
-	function saveChanges()
+	function saveChanges(e)
 	{
+		e.preventDefault();
 		disableAllButtons();
 		savePriority();
 	}
@@ -1245,6 +1251,7 @@ var HistoryEditDialog = (new function()
 	// Controls
 	var $HistoryEditDialog;
 	var $HistoryEdit_ParamData;
+	var $ServStatsTable;
 
 	// State
 	var curHist;
@@ -1265,6 +1272,17 @@ var HistoryEditDialog = (new function()
 		$('#HistoryEdit_Reprocess').click(itemReprocess);
 		$('#HistoryEdit_Param').click(tabClick);
 		$('#HistoryEdit_Back').click(backClick);
+		
+		$ServStatsTable = $('#HistoryEdit_ServStatsTable');
+		$ServStatsTable.fasttable(
+			{
+				filterInput: '#HistoryEdit_ServStatsTable_filter',
+				pagerContainer: '#HistoryEdit_ServStatsTable_pager',
+				pageSize: 100,
+				maxPages: 3,
+				hasHeader: true,
+				renderCellCallback: servStatsTableRenderCellCallback
+			});
 		
 		$HistoryEditDialog.on('hidden', function ()
 		{
@@ -1328,11 +1346,19 @@ var HistoryEditDialog = (new function()
 		$('#HistoryEdit_Path').text(hist.FinalDir !== '' ? hist.FinalDir : hist.DestDir);
 
 		var size = Util.formatSizeMB(hist.FileSizeMB, hist.FileSizeLo);
+		var completion = hist.SuccessArticles + hist.FailedArticles > 0 ? Util.round0(hist.SuccessArticles * 100.0 / (hist.SuccessArticles +  hist.FailedArticles)) + '%' : '--';
 
 		var table = '';
 		table += '<tr><td>Total</td><td class="text-right">' + size + '</td></tr>';
-		table += '<tr><td>Files (total/parked)</td><td class="text-right">' + hist.FileCount + '/' + hist.RemainingFileCount + '</td></tr>';
+		table += '<tr><td>Files (total/parked)</td><td class="text-center">' + hist.FileCount + ' / ' + hist.RemainingFileCount + '</td></tr>';
+		table += '<tr><td>Articles (total/completion)</td><td class="text-center">' + 
+			(hist.ServerStats.length > 0 ? '<a href="#" id="HistoryEdit_ServStat" data-tab="HistoryEdit_ServStatsTab" title="Per-server statistics">' : '') +
+			hist.TotalArticles + ' / ' + completion + 
+			(hist.ServerStats.length > 0 ? ' <i class="icon-forward" style="opacity:0.6;"></i></a>' : '') +
+			'</td></tr>';
 		$('#HistoryEdit_Statistics').html(table);
+		$('#HistoryEdit_ServStat').click(tabClick);
+		fillServStats();
 
 		Util.show($('#HistoryEdit_Return'), hist.RemainingFileCount > 0);
 		Util.show($('#HistoryEdit_ReturnURL'), hist.Kind === 'URL');
@@ -1356,6 +1382,7 @@ var HistoryEditDialog = (new function()
 		
 		$('#HistoryEdit_GeneralTab').show();
 		$('#HistoryEdit_ParamTab').hide();
+		$('#HistoryEdit_ServStatsTab').hide();
 		$('#HistoryEdit_Back').hide();
 		$('#HistoryEdit_BackSpace').show();
 		$HistoryEditDialog.restoreTab();
@@ -1408,8 +1435,9 @@ var HistoryEditDialog = (new function()
 		$('#HistoryEdit_Transmit').hide();
 	}
 
-	function itemDelete()
+	function itemDelete(e)
 	{
+		e.preventDefault();
 		ConfirmDialog.showModal('HistoryEditDeleteConfirmDialog', doItemDelete);
 	}
 
@@ -1420,15 +1448,17 @@ var HistoryEditDialog = (new function()
 		RPC.call('editqueue', ['HistoryDelete', 0, '', [curHist.ID]], completed);
 	}
 
-	function itemReturn()
+	function itemReturn(e)
 	{
+		e.preventDefault();
 		disableAllButtons();
 		notification = '#Notif_History_Returned';
 		RPC.call('editqueue', ['HistoryReturn', 0, '', [curHist.ID]], completed);
 	}
 
-	function itemReprocess()
+	function itemReprocess(e)
 	{
+		e.preventDefault();
 		disableAllButtons();
 		saveParam(function()
 			{
@@ -1448,8 +1478,9 @@ var HistoryEditDialog = (new function()
 		}
 	}
 	
-	function saveChanges()
+	function saveChanges(e)
 	{
+		e.preventDefault();
 		disableAllButtons();
 		notification = null;
 		saveParam(completed);
@@ -1478,6 +1509,60 @@ var HistoryEditDialog = (new function()
 		else
 		{
 			saveParamCompleted();
+		}
+	}
+
+	/*** TAB: SERVER STATISTICS **************************************************/
+	
+	function fillServStats()
+	{
+		var data = [];
+		for (var i=0; i < Status.status.NewsServers.length; i++)
+		{
+			var server = Status.status.NewsServers[i];
+			var name = Options.option('Server' + server.ID + '.Name');
+			if (name === null || name === '')
+			{
+				var host = Options.option('Server' + server.ID + '.Host');
+				var port = Options.option('Server' + server.ID + '.Port');
+				name = (host === null ? '' : host) + ':' + (port === null ? '119' : port);
+			}
+
+			var articles = '--';
+			var artquota = '--';
+			var success = '--';
+			var failures = '--';
+			for (var j=0; j < curHist.ServerStats.length; j++)
+			{
+				var stat = curHist.ServerStats[j];
+				if (stat.ServerID === server.ID && stat.SuccessArticles + stat.FailedArticles > 0)
+				{
+					articles = stat.SuccessArticles + stat.FailedArticles;
+					artquota = Util.round0(articles * 100.0 / (curHist.SuccessArticles + curHist.FailedArticles)) + '%';
+					success = Util.round0(stat.SuccessArticles * 100.0 / articles) + '%';
+					failures = Util.round0(stat.FailedArticles * 100.0 / articles) + '%';
+					break;
+				}
+			}
+			
+			var fields = [server.ID + '. ' + name, articles, artquota, success, failures];
+			var item =
+			{
+				id: server.ID,
+				fields: fields,
+				search: ''
+			};
+			data.push(item);
+		}
+		$ServStatsTable.fasttable('update', data);
+		$ServStatsTable.fasttable('setCurPage', 1);
+	}
+
+	function servStatsTableRenderCellCallback(cell, index, item)
+	{
+		if (index > 0)
+		{
+			cell.className = 'text-right';
 		}
 	}
 	
