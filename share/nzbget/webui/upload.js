@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 742 $
- * $Date: 2013-07-18 21:21:38 +0200 (Thu, 18 Jul 2013) $
+ * $Revision: 836 $
+ * $Date: 2013-09-23 22:18:54 +0200 (Mon, 23 Sep 2013) $
  *
  */
 
@@ -222,6 +222,8 @@ var Upload = (new function($)
 		$('#AddDialog_FilesHelp').show();
 		$('#AddDialog_URLLabel img').hide();
 		$('#AddDialog_URLLabel i').hide();
+		$('#AddDialog_Paused').prop('checked', false);
+		$('#AddDialog_DupeForce').prop('checked', false);
 		enableAllButtons();
 
 		var v = $('#AddDialog_Priority');
@@ -331,7 +333,9 @@ var Upload = (new function($)
 			var category = $('#AddDialog_Category').val();
 			var priority = parseInt($('#AddDialog_Priority').val());
 			var filename = file.name.replace(/\.queued$/g, '');
-			RPC.call('append', [filename, category, priority, false, base64str], fileCompleted, fileFailure);
+			var addPaused = $('#AddDialog_Paused').is(':checked');
+			var dupeMode = $('#AddDialog_DupeForce').is(':checked') ? "FORCE" : "SCORE";
+			RPC.call('append', [filename, category, priority, false, base64str, addPaused, '', 0, dupeMode], fileCompleted, fileFailure);
 		};
 
 		if (reader.readAsBinaryString)
@@ -372,8 +376,10 @@ var Upload = (new function($)
 
 		var category = $('#AddDialog_Category').val();
 		var priority = parseInt($('#AddDialog_Priority').val());
+		var addPaused = $('#AddDialog_Paused').is(':checked');
+		var dupeMode = $('#AddDialog_DupeForce').is(':checked') ? "FORCE" : "SCORE";
 
-		RPC.call('appendurl', ['', category, priority, false, url], urlCompleted, urlFailure);
+		RPC.call('appendurl', ['', category, priority, false, url, addPaused, '', 0, dupeMode], urlCompleted, urlFailure);
 	}
 
 	function urlCompleted(result)

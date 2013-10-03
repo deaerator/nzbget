@@ -17,8 +17,8 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 778 $
- * $Date: 2013-08-07 22:09:43 +0200 (Wed, 07 Aug 2013) $
+ * $Revision: 847 $
+ * $Date: 2013-09-26 22:22:28 +0200 (Thu, 26 Sep 2013) $
  *
  */
 
@@ -350,7 +350,9 @@ var FeedDialog = (new function($)
 			{
 				name += '.nzb';
 			}
-			RPC.call('appendurl', [name, fetchItems[0].AddCategory, fetchItems[0].Priority, false, fetchItems[0].URL], function()
+			RPC.call('appendurl', [name, fetchItems[0].AddCategory, fetchItems[0].Priority, false,
+				fetchItems[0].URL, false, fetchItems[0].DupeKey, fetchItems[0].DupeScore, fetchItems[0].DupeMode],
+				function()
 			{
 				fetchItems.shift();
 				fetchNextItem(fetchItems);
@@ -619,8 +621,11 @@ var FeedFilterDialog = (new function($)
 				case 'ACCEPTED':
 					var addInfo = [item.AddCategory !== feedCategory ? 'category: ' + item.AddCategory : null,
 						item.Priority !== feedPriority ? DownloadsUI.buildPriorityText(item.Priority) : null,
-						item.PauseNzb !== feedPauseNzb ? (item.PauseNzb ? 'paused' : 'pnpaused') : null].
-						filter(function(e){return e}).join(', ');
+						item.PauseNzb !== feedPauseNzb ? (item.PauseNzb ? 'paused' : 'unpaused') : null,
+						item.DupeScore != 0 ? 'dupe-score: ' + item.DupeScore : null,
+						item.DupeKey !== '' ? 'dupe-key: ' + item.DupeKey : null,
+						item.DupeMode !== 'SCORE' ? 'dupe-mode: ' + item.DupeMode.toLowerCase() : null].
+						filter(function(e){return e}).join('; ');
 					status = '<span class="label label-status label-success" title="' + Util.textToAttr(addInfo) + '">ACCEPTED</span>';
 					countAccepted += 1;
 					break;

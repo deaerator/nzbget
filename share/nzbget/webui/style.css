@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 794 $
- * $Date: 2013-08-16 23:53:32 +0200 (Fri, 16 Aug 2013) $
+ * $Revision: 816 $
+ * $Date: 2013-09-13 22:13:09 +0200 (Fri, 13 Sep 2013) $
  *
  */
 
@@ -612,6 +612,18 @@ ul.dropdown-menu > li > a > i {
 
 .icon-process-auto {
 	background-position: -336px -144px;
+}
+
+.icon-duplicates {
+	background-position: -368px -144px;
+}
+
+.icon-not-duplicates {
+	background-position: -400px -144px;
+}
+
+.icon-duplicates-white {
+	background-position: -432px -144px;
 }
 
 /* END: Icons */

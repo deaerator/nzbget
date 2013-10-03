@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 793 $
- * $Date: 2013-08-15 19:21:01 +0200 (Thu, 15 Aug 2013) $
+ * $Revision: 856 $
+ * $Date: 2013-09-30 21:31:27 +0200 (Mon, 30 Sep 2013) $
  *
  */
 
@@ -147,24 +147,20 @@ var Downloads = (new function($)
 
 			if (!found)
 			{
-				// create a virtual group-item
-				var group = {post: post};
-				group.NZBID = post.NZBID;
-				group.NZBName = post.NZBName;
+				// create a virtual group-item:
+				// post-item has most of fields the group-item has,
+				// we use post-item as basis and then add missing fields.
+				group = $.extend({}, post);
+				group.post = post;
 				group.MaxPriority = 0;
-				group.Category = '';
 				group.LastID = 0;
 				group.MinPostTime = 0;
-				group.FileSizeMB = 0;
-				group.FileSizeLo = 0;
 				group.RemainingSizeMB = 0;
 				group.RemainingSizeLo = 0;
 				group.PausedSizeMB = 0;
 				group.PausedSizeLo = 0;
-				group.FileCount = 0;
 				group.RemainingFileCount = 0;
 				group.RemainingParCount = 0;
-				group.Parameters = [];
 
 				// insert it after the last pp-item
 				if (lastPPItemIndex > -1)
@@ -217,13 +213,14 @@ var Downloads = (new function($)
 			var age = Util.formatAge(group.MinPostTime + UISettings.timeZoneCorrection*60*60);
 			var size = Util.formatSizeMB(group.FileSizeMB, group.FileSizeLo);
 			var remaining = Util.formatSizeMB(group.RemainingSizeMB-group.PausedSizeMB, group.RemainingSizeLo-group.PausedSizeLo);
-
+			var dupe = DownloadsUI.buildDupeText(group.DupeKey, group.DupeScore, group.DupeMode);
+			
 			var item =
 			{
 				id: group.NZBID,
 				group: group,
 				data: { age: age, estimated: estimated, size: size, remaining: remaining },
-				search: group.status + ' ' + nametext + ' ' + priority + ' ' + group.Category + ' ' + age + ' ' + size + ' ' + remaining + ' ' + estimated
+				search: group.status + ' ' + nametext + ' ' + priority + ' ' + dupe + ' ' + group.Category + ' ' + age + ' ' + size + ' ' + remaining + ' ' + estimated
 			};
 
 			data.push(item);
@@ -240,6 +237,7 @@ var Downloads = (new function($)
 		var priority = DownloadsUI.buildPriority(group.MaxPriority);
 		var progresslabel = DownloadsUI.buildProgressLabel(group, nameColumnWidth);
 		var progress = DownloadsUI.buildProgress(group, item.data.size, item.data.remaining, item.data.estimated);
+		var dupe = DownloadsUI.buildDupe(group.DupeKey, group.DupeScore, group.DupeMode);
 
 		var name = '<a href="#" nzbid="' + group.NZBID + '">' + Util.textToHtml(Util.formatNZBName(group.NZBName)) + '</a>';
 		
@@ -249,20 +247,20 @@ var Downloads = (new function($)
 		{
 			health = ' <span class="label ' + 
 				(group.Health >= group.CriticalHealth ? 'label-warning' : 'label-important') +
-				'">health: ' + Math.floor(group.Health / 10) + '%</span>';
+				'">health: ' + Math.floor(group.Health / 10) + '%</span> ';
 		}
 		
 		var category = Util.textToHtml(group.Category);
 
 		if (!UISettings.miniTheme)
 		{
-			var info = name + ' ' + priority + health + progresslabel;
+			var info = name + ' ' + priority + dupe + health + progresslabel;
 			item.fields = ['<div class="check img-check"></div>', status, info, category, item.data.age, progress, item.data.estimated];
 		}
 		else
 		{
 			var info = '<div class="check img-check"></div><span class="row-title">' + name + '</span>' +
-				' ' + (group.status === 'queued' ? '' : status) + ' ' + priority + health;
+				' ' + (group.status === 'queued' ? '' : status) + ' ' + priority + dupe + health;
 			if (category)
 			{
 				info += ' <span class="label label-status">' + category + '</span>';
@@ -572,6 +570,7 @@ var DownloadsUI = (new function($)
 	
 	// State
 	var categoryColumnWidth = null;
+	var dupeCheck = null;
 	
 	this.fillPriorityCombo = function(combo)
 	{
@@ -756,6 +755,55 @@ var DownloadsUI = (new function($)
 		}
 	}
 	
+	function formatDupeText(dupeKey, dupeScore, dupeMode)
+	{
+		dupeKey = dupeKey.replace('rageid=', '');
+		dupeKey = dupeKey.replace('imdb=', '');
+		dupeKey = dupeKey.replace('series=', '');
+		dupeKey = dupeKey.replace('nzb=', '#');
+		dupeKey = dupeKey.replace('=', ' ');
+		dupeKey = dupeKey === '' ? 'title' : dupeKey;
+		return dupeKey;
+	}
+
+	this.buildDupeText = function(dupeKey, dupeScore, dupeMode)
+	{
+		if (dupeCheck == null)
+		{
+			dupeCheck = Options.option('DupeCheck') === 'yes';
+		}
+
+		if (dupeCheck && dupeKey != '')
+		{
+			return formatDupeText(dupeKey, dupeScore, dupeMode);
+		}
+		else
+		{
+			return '';
+		}
+	}
+
+	this.buildDupe = function(dupeKey, dupeScore, dupeMode)
+	{
+		if (dupeCheck == null)
+		{
+			dupeCheck = Options.option('DupeCheck') === 'yes';
+		}
+
+		if (dupeCheck && dupeKey != '')
+		{
+			return ' <span class="label' + (dupeMode === 'FORCE' ? ' label-important' : '') +
+				'" title="Duplicate key: ' + dupeKey +
+				(dupeScore !== 0 ? '; score: ' + dupeScore : '') +
+				(dupeMode !== 'SCORE' ? '; mode: ' + dupeMode.toLowerCase() : '') +
+				'">' + formatDupeText(dupeKey, dupeScore, dupeMode) + '</span> ';
+		}
+		else
+		{
+			return '';
+		}
+	}
+
 	this.resetCategoryColumnWidth = function()
 	{
 		categoryColumnWidth = null;

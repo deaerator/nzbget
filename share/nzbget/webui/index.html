@@ -18,8 +18,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 805 $
- * $Date: 2013-08-29 21:56:29 +0200 (Thu, 29 Aug 2013) $
+ * $Revision: 857 $
+ * $Date: 2013-09-30 21:38:26 +0200 (Mon, 30 Sep 2013) $
  *
  -->
 
@@ -317,6 +317,10 @@
 			<div class="btn-toolbar form-inline section-toolbar">
 				<div class="btn-group">
 					<button class="btn" onclick="History.deleteClick()" title="Delete selected records"><i class="icon-trash"></i><span class="btn-caption"> Delete</span></button>
+				</div>
+
+				<div class="btn-group">
+					<button class="btn" id="History_Dup" onclick="History.dupClick()" title="Show old records kept for duplicate check"><i class="icon-duplicates" id="History_DupIcon"></i><span class="btn-caption"> Old</span></button>
 				</div>
 
 				<div class="btn-group phone-only inline" id="HistoryRecordsPerPageBlockPhone">
@@ -878,6 +882,37 @@
 				</div>
 			</div>
 
+			<div class="modal-tab hide" id="DownloadsEdit_DupeTab">
+				<div class="form-horizontal">
+					<fieldset>
+						<div class="control-group">
+							<label class="control-label" for="DownloadsEdit_DupeKey">Duplicate key</label>
+							<div class="controls">
+								<input type="text" class="input-xlarge" id="DownloadsEdit_DupeKey" />
+							</div>
+						</div>
+
+						<div class="control-group">
+							<label class="control-label" for="DownloadsEdit_DupeScore">Duplicate score</label>
+							<div class="controls">
+								<input type="text" class="input-small" id="DownloadsEdit_DupeScore" />
+							</div>
+						</div>
+
+						<div class="control-group">
+							<label class="control-label" for="DownloadsEdit_DupeMode">Duplicate mode</label>
+							<div class="controls">
+								<select id="DownloadsEdit_DupeMode" class="input-small">
+									<option value="SCORE">Score</option>
+									<option value="ALL">All</option>
+									<option value="FORCE">Force</option>
+								</select>
+							</div>
+						</div>
+					</fieldset>
+				</div>
+			</div>
+			
 		</div>
 
 	</div>
@@ -890,6 +925,7 @@
 				<li><a href="#" id="DownloadsEdit_Resume"><i class="icon-play"></i> Resume</a></li>
 				<li><a href="#" id="DownloadsEdit_Pause"><i class="icon-pause"></i> Pause</a></li>
 				<li><a href="#" id="DownloadsEdit_Delete"><i class="icon-trash"></i> Delete</a></li>
+				<li><a href="#" id="DownloadsEdit_Dupe" data-tab="DownloadsEdit_DupeTab"><i class="icon-duplicates"></i> Duplicate Properties</a></li>
 				<li><a href="#" id="DownloadsEdit_CancelPP"><i class="icon-remove"></i> Cancel Post-Processing</a></li>
 				<li class="menu-header" id="DownloadsEdit_DNZB_Section">Indexer Links</li>
 				<li><a href="#" target="_blank" class="DownloadsEdit_DNZB" id="DownloadsEdit_DNZB_Details"><i class="icon-postcard"></i> Details</a></li>
@@ -982,6 +1018,14 @@
 	</div>
 
 	<div class="modal-footer">
+		<div class="btn-group dropup pull-left">
+			<a class="btn dropdown-toggle" data-toggle="dropdown">Actions <span class="caret"></span></a>
+			<ul class="dropdown-menu footer-button-menu" id="DownloadsMulti_ActionsMenu">
+				<li class="menu-header">Actions</li>
+				<li><a href="#" id="DownloadsMulti_MarkDupe"><i class="icon-duplicates"></i> Mark as Duplicates</a></li>
+			</ul>
+		</div>
+
 		<div class="dialog-transmit hide" style="position:absolute;margin-left:260px;" id="DownloadsMulti_Transmit"><img src="img/transmit.gif"></div>
 		<a href="#" class="btn" data-dismiss="modal" id="DownloadsMulti_Close">Cancel</a>
 		<a href="#" class="btn btn-primary" id="DownloadsMulti_Save">Save</a>
@@ -1071,7 +1115,7 @@
 							</div>
 						</div>
 
-						<div class="control-group">
+						<div class="control-group" id="HistoryEdit_CategoryGroup">
 							<label class="control-label" for="HistoryEdit_Category">Category</label>
 							<div class="controls">
 								<span class="input-medium uneditable-input" id="HistoryEdit_Category"></span>
@@ -1092,6 +1136,13 @@
 								<tbody id="HistoryEdit_Statistics">
 								</tbody>
 							</table>
+							</div>
+						</div>
+
+						<div class="control-group control-group-last" id="HistoryEdit_DupGroup">
+							<div class="controls">
+								This old history item has no information other than status. It is kept
+								in history for duplicate check.
 							</div>
 						</div>
 
@@ -1125,6 +1176,38 @@
 					<div class="pull-right hide" id="HistoryEdit_ServStatsTable_pagerBlock"><div class="pagination" id ="HistoryEdit_ServStatsTable_pager"></div></div>
 				</div>
 			</div>
+
+			<div class="modal-tab hide" id="HistoryEdit_DupeTab">
+				<div class="form-horizontal">
+					<fieldset>
+						<div class="control-group">
+							<label class="control-label" for="HistoryEdit_DupeKey">Duplicate key</label>
+							<div class="controls">
+								<input type="text" class="input-xlarge" id="HistoryEdit_DupeKey" />
+							</div>
+						</div>
+
+						<div class="control-group">
+							<label class="control-label" for="HistoryEdit_DupeScore">Duplicate score</label>
+							<div class="controls">
+								<input type="text" class="input-small" id="HistoryEdit_DupeScore" />
+							</div>
+						</div>
+
+						<div class="control-group">
+							<label class="control-label" for="HistoryEdit_DupeMode">Duplicate mode</label>
+							<div class="controls">
+								<select id="HistoryEdit_DupeMode" class="input-small">
+									<option value="SCORE">Score</option>
+									<option value="ALL">All</option>
+									<option value="FORCE">Force</option>
+								</select>
+							</div>
+						</div>
+					</fieldset>
+				</div>
+			</div>
+
 		</div>
 	</div>
 
@@ -1138,6 +1221,9 @@
 				<li><a href="#" id="HistoryEdit_Reprocess"><i class="icon-process"></i> Post-Process Again</a></li>
 				<li><a href="#" id="HistoryEdit_Return"><i class="icon-downloads"></i> Download Remaining Files</a></li>
 				<li><a href="#" id="HistoryEdit_ReturnURL"><i class="icon-downloads"></i> Download Again</a></li>
+				<li><a href="#" id="HistoryEdit_MarkGood"><i class="icon-ok"></i> Mark as Good</a></li>
+				<li><a href="#" id="HistoryEdit_MarkBad"><i class="icon-remove"></i> Mark as Bad</a></li>
+				<li><a href="#" id="HistoryEdit_Dupe" data-tab="HistoryEdit_DupeTab"><i class="icon-duplicates"></i> Duplicate Properties</a></li>
 				<li class="menu-header" id="HistoryEdit_DNZB_Section">Indexer Links</li>
 				<li><a href="#" target="_blank" class="HistoryEdit_DNZB" id="HistoryEdit_DNZB_Details"><i class="icon-postcard"></i> Details</a></li>
 				<li><a href="#" target="_blank" class="HistoryEdit_DNZB" id="HistoryEdit_DNZB_MoreInfo"><i class="icon-link"></i> More Info</a></li>
@@ -1362,22 +1448,34 @@
 
 		<h4>Options</h4>
 		<p>
-		<em>Options</em> allow to set category, priority and a flag to add nzb-file in paused state.
+		<em>Options</em> allow to set properties on nzb-file. It's a comma-separated list of property names with their values.
 		</p>
 		<p>
-		Definition of options:
+		Definition of an option:
 		</p>
 		<p><strong>
-		[category,] [priority,] [paused|unpaused]
+		name:value
 		</strong></p>
 
 		<p>
+		Options can be defined using long option names or short names:
 		<table class="table table-bordered">
 		<tbody>
-		<tr><td>category</td><td>category name which must not be "paused", "unpaused" and must not start with a digit or plus/minus;</td></tr>
-		<tr><td>priority</td><td>signed integer number;</td></tr>
-		<tr><td>paused</td><td>add nzb in paused state;</td></tr>
-		<tr><td>unpaused</td><td>add nzb in unpaused state.</td></tr>
+		<tr><td width="110px">category (cat, c)</td><td>set category name, value is a string;</td></tr>
+		<tr><td>pause (p)</td><td>add nzb in paused or unpaused state, possible values are: yes (y), no (n);</td></tr>
+		<tr><td>priority (pr, r)</td><td>set priority, value is a signed integer number;</td></tr>
+		<tr><td>priority+ (pr+, r+)</td><td>increase priority, value is a signed integer number;</td></tr>
+		<tr><td>dupescore (ds, s)</td><td>set duplicate score, value is a signed integer number;</td></tr>
+		<tr><td>dupescore+ (ds+, s+)</td><td>increase duplicate score, value is a signed integer number;</td></tr>
+		<tr><td>dupekey (dk, k)</td><td>set duplicate key, value is a string;</td></tr>
+		<tr><td>dupekey+ (dk+, k+)</td><td>add to duplicate key, value is a string;</td></tr>
+		<tr><td>dupemode (dm, m)</td><td>set duplicate check mode, possible values are: score (s), all (a), force (f). 
+				<em>Score</em> - download duplicates with higher scores;
+				<em>All</em> - download all duplicates regardless of scores;
+				<em>Force</em> - treat item as unique, ignore all duplicate checks.
+				For <em>Score</em> and <em>All</em> item is skipped if a duplicate marked as "good" exists in history.</td></tr>
+		<tr><td>rageid</td><td>generate duplicate key using this rageid (integer number) and season/episode numbers;</td></tr>
+		<tr><td>series</td><td>generate duplicate key using series identifier (any unique string) and season/episode numbers.</td></tr>
 		</tbody>
 		</table>
 		</p>
@@ -1405,13 +1503,11 @@
 		<tbody>
 		<tr><td>+</td>
 		<td>
-		declares a positive term. Terms are positive by default,
-				   the "+" can be omitted;
+		declares a positive term. Terms are positive by default, the "+" can be omitted;
 		</td></tr>
 		<tr><td>-</td>
 		<td>
-		declares a negative term. If the term succeed the feed
-				   item is ignored;
+		declares a negative term. If the term succeeds the rule does not match;
 		</td></tr>
 		<tr>
 		<td>field</td>
@@ -1420,8 +1516,7 @@
 		</td></tr>
 		<tr><td>command</td>
 		<td>
-		a special character defining how to interpret the
-				   parameter (followed after the command):
+		a special character defining how to interpret the parameter (followed after the command):
 			<table class="table-nonbordered">
 			<tbody>
 			<tr><td>@</td><td> - search for string "param". This is default command, the "@" can be omitted;</td></tr>
@@ -1444,14 +1539,14 @@
 		
 		<ul>
 		<li>Commands @ and $ are for use with text fields (title, filename, category,
-		link, genre).</li>
-		<li>Commands =, &lt;, &lt;=, &gt; and &gt;= are for use with numeric fields (size,
-		age, rating, rageid, season, episode).</li>
+		link, genre, dupekey).</li>
+		<li>Commands =, &lt;, &lt;=, &gt; and &gt;= are for use with numeric fields (size, age,
+		rating, imdbid, rageid, season, episode, priority, dupescore).</li>
 		</ul>
 
 		<strong>More about text search (command @):</strong>
 		<ul>
-		<li>Text search supports wildcard characters * and ?.</li>
+		<li>Text search supports wildcard characters * (matches any number of any characters), ? (matches any one character) and # (matches one digit).</li>
 		<li>Text search is by default performed against words (word-search mode): the field content
 		is separated into words and then each word is checked against pattern.</li>
 		<li>If the search pattern starts and ends with * (star) the search is performed against the
@@ -1484,7 +1579,7 @@
 		<li>*my?show* WEB-DL size:&lt;1.8GB age:&gt;2h</li>
 		<li>R: size:&gt;9GB</li>
 		<li>Q: HDTV</li>
-		<li>A(big movies,50,paused): size:&gt;8GB</>
+		<li>A(category:big movies, priority:50, pause:yes): size:&gt;8GB</>
 		</ul>
 		
 		<p><span class="label label-warning">NOTE:</span>
@@ -1597,6 +1692,39 @@
 	<div id="HistoryEditDeleteConfirmDialog_OK">Delete</div>
 </div>
 
+<!-- *** MARK AS GOOD CURRENT HISTORY RECORD CONFIRMATION DIALOG DATA ******************************** -->
+
+<div class="hide" id="HistoryEditGoodConfirmDialog">
+	<div id="HistoryEditGoodConfirmDialog_Title">History</div>
+	<div id="HistoryEditGoodConfirmDialog_Text">
+		<p>
+		Mark this history record as good?
+		</p>
+		<p class="confirm-help-block">
+		Marking has an effect on duplicate handling and RSS.<br>For titles marked as good no more duplicates
+		will be downloaded, even with higher duplicate score. Existing dupe-backups will be removed from recent history.
+		</p>
+	</div>
+	<div id="HistoryEditGoodConfirmDialog_OK">Mark Good</div>
+</div>
+
+<!-- *** MARK AS BAD CURRENT HISTORY RECORD CONFIRMATION DIALOG DATA ******************************** -->
+
+<div class="hide" id="HistoryEditBadConfirmDialog">
+	<div id="HistoryEditBadConfirmDialog_Title">History</div>
+	<div id="HistoryEditBadConfirmDialog_Text">
+		<p>
+		Mark this history record as Bad?
+		</p>
+		<p class="confirm-help-block">
+		Marking has an effect on duplicate handling and RSS.<br>If dupe-backups exist in the history
+		they will be moved to queue for download. Otherwise the title will be watched and downloaded
+		when it becomes available.
+		</p>
+	</div>
+	<div id="HistoryEditBadConfirmDialog_OK">Mark Bad</div>
+</div>
+
 <!-- *** CLEAR MESSAGES CONFIRMATION DIALOG DATA ***************************************** -->
 
 <div class="hide" id="MessagesClearConfirmDialog">
@@ -1640,7 +1768,6 @@
 					<label class="control-label" for="URL" id="AddDialog_URLLabel"><i class="icon-remove"></i><img class="hide" src="img/transmit-file.gif"> Add from URL</label>
 					<div class="controls">
 						<input type="text" class="input-xlarge" id="AddDialog_URL" />
-						<p class="help-block">The nzb-file will be downloaded from the URL and added to queue.</p>
 					</div>
 				</div>
 
@@ -1649,7 +1776,6 @@
 					<div class="controls">
 						<div style="margin-top:6px; margin-bottom:10px;"><a href="#" class="btn" style="margin-top: -6px;" id="AddDialog_Select">Select files</a> or drop files here.</div>
 						<input multiple="multiple" type="file" id="AddDialog_Input" class="hidden-file-input">
-						<p class="help-block" id="AddDialog_FilesHelp">You need a modern browser for this to work.</p>
 						<div class="dialog-add-files hide" id="AddDialog_Files"></div>
 					</div>
 				</div>
@@ -1671,13 +1797,20 @@
 				</div>
 
 				<div class="control-group">
-					<label class="control-label" for="URL">Add from incoming directory</label>
+					<label class="control-label" for="URL">Options</label>
 					<div class="controls">
-						<a href="#" class="btn" id="AddDialog_Scan">Scan</a>
-						<p class="help-block">Click Scan if you have already put files to incoming directory (option <em>NzbDir</em>). The dialog will be closed automatically.</p>
+						<label class="checkbox"><input type="checkbox" id="AddDialog_Paused"> Add paused</label>
+						<label class="checkbox"><input type="checkbox" id="AddDialog_DupeForce"> Disable duplicate check</label>
 					</div>
 				</div>
 
+				<div class="control-group">
+					<label class="control-label" for="URL">Add from NzbDir</label>
+					<div class="controls">
+						<a href="#" class="btn" id="AddDialog_Scan">Scan incoming directory</a>
+					</div>
+				</div>
+				
 			</fieldset>
 		</div>
 	</div>
@@ -1719,7 +1852,7 @@
 			The <strong>Add Dialog</strong> will show automatically.</li>
 			<li>Priority and category can be changed later in the edit dialog.</li>
 			<li>The categories can be configured in section <strong>CATEGORIES</strong> on settings page.</li>
-			<li>Use button <strong>Scan</strong> if the automatic scanning of incoming nzb-directory is disabled (see options <em>NzbDir</em> and <em>NzbDirInterval</em>).</li>
+			<li>Use button <strong>Scan incoming directory</strong> if the automatic scanning of incoming nzb-directory is disabled (see options <em>NzbDir</em> and <em>NzbDirInterval</em>).</li>
 		</ul>
 	</div>
 </div>
@@ -2011,6 +2144,14 @@
 
 <div id="Notif_History_Saved" data-duration="1000" class="alert alert-inverse alert-center alert-center-small hide">
     <strong>Saved</strong>
+</div>
+
+<div id="Notif_History_Select" data-duration="2000" class="alert alert-error alert-center alert-center-small hide">
+    <strong>Please select records first</strong>
+</div>
+
+<div id="Notif_History_Marked" data-duration="1000" class="alert alert-inverse alert-center alert-center-small hide">
+    <strong>Marked</strong>
 </div>
 
 <div id="Notif_Feeds_FetchAll" data-duration="1000" class="alert alert-inverse alert-center alert-center-small hide">
