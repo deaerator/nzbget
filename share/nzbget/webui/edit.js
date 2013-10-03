@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 794 $
- * $Date: 2013-08-16 23:53:32 +0200 (Fri, 16 Aug 2013) $
+ * $Revision: 851 $
+ * $Date: 2013-09-27 22:45:24 +0200 (Fri, 27 Sep 2013) $
  *
  */
 
@@ -62,7 +62,7 @@ var DownloadsEditDialog = (new function($)
 		$('#DownloadsEdit_Resume').click(itemResume);
 		$('#DownloadsEdit_Delete').click(itemDelete);
 		$('#DownloadsEdit_CancelPP').click(itemCancelPP);
-		$('#DownloadsEdit_Param, #DownloadsEdit_Log, #DownloadsEdit_File').click(tabClick);
+		$('#DownloadsEdit_Param, #DownloadsEdit_Log, #DownloadsEdit_File, #DownloadsEdit_Dupe').click(tabClick);
 		$('#DownloadsEdit_Back').click(backClick);
 
 		$DownloadsLogTable = $('#DownloadsEdit_LogTable');
@@ -187,6 +187,11 @@ var DownloadsEditDialog = (new function($)
 			v.append($('<option selected="selected"></option>').text(group.Category));
 		}
 
+		// duplicate settings
+		$('#DownloadsEdit_DupeKey').val(group.DupeKey);
+		$('#DownloadsEdit_DupeScore').val(group.DupeScore);
+		$('#DownloadsEdit_DupeMode').val(group.DupeMode);
+		
 		$DownloadsLogTable.fasttable('update', []);
 		$DownloadsFileTable.fasttable('update', []);
 
@@ -198,6 +203,8 @@ var DownloadsEditDialog = (new function($)
 		Util.show('#DownloadsEdit_Pause', !group.postprocess);
 		Util.show('#DownloadsEdit_Resume', false);
 		Util.show('#DownloadsEdit_Save', !group.postprocess);
+		var dupeCheck = Options.option('DupeCheck') === 'yes';
+		Util.show('#DownloadsEdit_Dupe', dupeCheck);
 		var postParam = postParamConfig[0].options.length > 0;
 		var postLog = group.postprocess && group.post.Log.length > 0;
 		Util.show('#DownloadsEdit_Param', postParam);
@@ -239,6 +246,7 @@ var DownloadsEditDialog = (new function($)
 		$('#DownloadsEdit_ParamTab').hide();
 		$('#DownloadsEdit_LogTab').hide();
 		$('#DownloadsEdit_FileTab').hide();
+		$('#DownloadsEdit_DupeTab').hide();
 		$('#DownloadsEdit_Back').hide();
 		$('#DownloadsEdit_BackSpace').show();
 		$DownloadsEditDialog.restoreTab();
@@ -386,9 +394,9 @@ var DownloadsEditDialog = (new function($)
 			RPC.call('editqueue', ['GroupSetCategory', 0, category, [curGroup.LastID]], function()
 			{
 				notification = '#Notif_Downloads_Saved';
-				saveParam();
+				saveDupeKey();
 			})
-			: saveParam();
+			: saveDupeKey();
 	}
 
 	function itemPause(e)
@@ -476,6 +484,44 @@ var DownloadsEditDialog = (new function($)
 		{
 			saveFiles();
 		}
+	}
+
+	/*** TAB: DUPLICATE SETTINGS **************************************************/
+
+	function saveDupeKey()
+	{
+		var value = $('#DownloadsEdit_DupeKey').val();
+		value !== curGroup.DupeKey ?
+			RPC.call('editqueue', ['GroupSetDupeKey', 0, value, [curGroup.LastID]], function()
+			{
+				notification = '#Notif_Downloads_Saved';
+				saveDupeScore();
+			})
+			:saveDupeScore();
+	}
+
+	function saveDupeScore()
+	{
+		var value = $('#DownloadsEdit_DupeScore').val();
+		value != curGroup.DupeScore ?
+			RPC.call('editqueue', ['GroupSetDupeScore', 0, value, [curGroup.LastID]], function()
+			{
+				notification = '#Notif_Downloads_Saved';
+				saveDupeMode();
+			})
+			:saveDupeMode();
+	}
+	
+	function saveDupeMode()
+	{
+		var value = $('#DownloadsEdit_DupeMode').val();
+		value !== curGroup.DupeMode ?
+			RPC.call('editqueue', ['GroupSetDupeMode', 0, value, [curGroup.LastID]], function()
+			{
+				notification = '#Notif_Downloads_Saved';
+				saveParam();
+			})
+			:saveParam();
 	}
 
 	/*** TAB: LOG *************************************************************************/
@@ -907,7 +953,7 @@ var ParamTab = (new function($)
 				{
 					var oldValue = option.value;
 					var newValue = Config.getOptionValue(option);
-					if (oldValue != newValue && !(oldValue === '' && newValue === option.defvalue))
+					if (oldValue != newValue && !((oldValue === null || oldValue === '') && newValue === option.defvalue))
 					{
 						var opt = option.name + '=' + newValue;
 						request.push(opt);
@@ -940,6 +986,7 @@ var DownloadsMultiDialog = (new function($)
 		$DownloadsMultiDialog = $('#DownloadsMultiDialog');
 		
 		$('#DownloadsMulti_Save').click(saveChanges);
+		$('#DownloadsMulti_MarkDupe').click(itemMarkDupe);
 
 		$DownloadsMultiDialog.on('hidden', function ()
 		{
@@ -1051,6 +1098,9 @@ var DownloadsMultiDialog = (new function($)
 			v.append('<option selected="selected">&lt;multiple values&gt;</option>');
 		}
 		oldCategory = v.val();
+		
+		var dupeCheck = Options.option('DupeCheck') === 'yes';
+		Util.show('#DownloadsMulti_MarkDupe', dupeCheck);
 
 		enableAllButtons();
 		$('#DownloadsMulti_GeneralTabLink').tab('show');
@@ -1115,6 +1165,15 @@ var DownloadsMultiDialog = (new function($)
 			Notification.show(notification);
 		}
 	}
+
+	function itemMarkDupe(e)
+	{
+		e.preventDefault();
+		disableAllButtons();
+		notification = '#Notif_Downloads_Saved';
+		RPC.call('editqueue', ['GroupMarkDupe', 0, '',multiIDList], completed);
+	}
+
 }(jQuery));
 
 
@@ -1259,7 +1318,7 @@ var HistoryEditDialog = (new function()
 	var postParams = [];
 	var lastPage;
 	var lastFullscreen;
-	var saveParamCompleted;
+	var saveCompleted;
 
 	this.init = function()
 	{
@@ -1270,8 +1329,10 @@ var HistoryEditDialog = (new function()
 		$('#HistoryEdit_Delete').click(itemDelete);
 		$('#HistoryEdit_Return, #HistoryEdit_ReturnURL').click(itemReturn);
 		$('#HistoryEdit_Reprocess').click(itemReprocess);
-		$('#HistoryEdit_Param').click(tabClick);
+		$('#HistoryEdit_Param, #HistoryEdit_Dupe').click(tabClick);
 		$('#HistoryEdit_Back').click(backClick);
+		$('#HistoryEdit_MarkGood').click(itemGood);
+		$('#HistoryEdit_MarkBad').click(itemBad);
 		
 		$ServStatsTable = $('#HistoryEdit_ServStatsTable');
 		$ServStatsTable.fasttable(
@@ -1301,88 +1362,123 @@ var HistoryEditDialog = (new function()
 		curHist = hist;
 
 		var status;
-		if (hist.Kind === 'URL')
-		{
-			status = HistoryUI.buildStatus(hist.status, '');
-		}
-		else
+		if (hist.Kind === 'NZB')
 		{
 			status = '<span class="label label-status ' + 
 				(hist.Health === 1000 ? 'label-success' : hist.Health >= hist.CriticalHealth ? 'label-warning' : 'label-important') +
 				'">health: ' + Math.floor(hist.Health / 10) + '%</span>';
 
-			if (hist.Deleted && !hist.HealthDeleted)
+			if (hist.MarkStatus !== 'NONE')
 			{
-				status += ' ' + HistoryUI.buildStatus('deleted', '');
+				status += ' ' + HistoryUI.buildStatus(hist.MarkStatus, 'Mark: ');
+			}
+			
+			if (hist.DeleteStatus === 'NONE')
+			{
+				status += ' ' + HistoryUI.buildStatus(hist.ParStatus, 'Par: ') +
+					' ' + (Options.option('Unpack') == 'yes' || hist.UnpackStatus != 'NONE' ? HistoryUI.buildStatus(hist.UnpackStatus, 'Unpack: ') : '')  +
+					' ' + (hist.MoveStatus === "FAILURE" ? HistoryUI.buildStatus(hist.MoveStatus, 'Move: ') : '');
 			}
 			else
 			{
-				if (hist.HealthDeleted)
-				{
-					status += ' ' + HistoryUI.buildStatus('aborted', '');
-				}
-				else
-				{
-					status += ' ' + HistoryUI.buildStatus(hist.ParStatus, 'Par: ') +
-						' ' + (Options.option('Unpack') == 'yes' || hist.UnpackStatus != 'NONE' ? HistoryUI.buildStatus(hist.UnpackStatus, 'Unpack: ') : '')  +
-						' ' + (hist.MoveStatus === "FAILURE" ? HistoryUI.buildStatus(hist.MoveStatus, 'Move: ') : '');
-				}
-				for (var i=0; i<hist.ScriptStatuses.length; i++)
-				{
-					var scriptStatus = hist.ScriptStatuses[i];
-					status += ' ' + HistoryUI.buildStatus(scriptStatus.Status, Options.shortScriptName(scriptStatus.Name) + ': ') + ' ';
-				}
+				status += ' ' + HistoryUI.buildStatus('edit-deleted-' + hist.DeleteStatus, 'Delete: ');
+			}
+			
+			for (var i=0; i<hist.ScriptStatuses.length; i++)
+			{
+				var scriptStatus = hist.ScriptStatuses[i];
+				status += ' ' + HistoryUI.buildStatus(scriptStatus.Status, Options.shortScriptName(scriptStatus.Name) + ': ') + ' ';
 			}
 		}
+		else if (hist.Kind === 'URL')
+		{
+			if (hist.UrlStatus == 'SCAN_SKIPPED')
+			{
+				status = HistoryUI.buildStatus('SUCCESS', 'Download: ') + ' ' +
+					HistoryUI.buildStatus('SCAN_SKIPPED', 'Scan: ');
+			}
+			else if (hist.UrlStatus == 'SCAN_FAILURE')
+			{
+				status = HistoryUI.buildStatus('SUCCESS', 'Download: ') + ' ' +
+					HistoryUI.buildStatus('FAILURE', 'Scan: ');
+			}
+			else
+			{
+				status = HistoryUI.buildStatus(hist.status, 'Download: ');
+			}
+		}
+		else if (hist.Kind === 'DUP')
+		{
+			status = HistoryUI.buildStatus(hist.status, '');
+		}
+		$('#HistoryEdit_Status').html(status);
 
 		$('#HistoryEdit_Title').text(Util.formatNZBName(hist.Name));
-		if (hist.Kind === 'URL')
+		if (hist.Kind !== 'NZB')
 		{
-			$('#HistoryEdit_Title').html($('#HistoryEdit_Title').html() + '&nbsp;' + '<span class="label label-info">URL</span>');
+			$('#HistoryEdit_Title').html($('#HistoryEdit_Title').html() + '&nbsp;' + '<span class="label label-info">' + hist.Kind + '</span>');
 		}
 
-		$('#HistoryEdit_Status').html(status);
-		$('#HistoryEdit_Category').text(hist.Category);
-		$('#HistoryEdit_Path').text(hist.FinalDir !== '' ? hist.FinalDir : hist.DestDir);
+		if (hist.Kind !== 'DUP')
+		{
+			$('#HistoryEdit_Category').text(hist.Category);
+		}
 
-		var size = Util.formatSizeMB(hist.FileSizeMB, hist.FileSizeLo);
-		var completion = hist.SuccessArticles + hist.FailedArticles > 0 ? Util.round0(hist.SuccessArticles * 100.0 / (hist.SuccessArticles +  hist.FailedArticles)) + '%' : '--';
+		if (hist.Kind === 'NZB')
+		{
+			$('#HistoryEdit_Path').text(hist.FinalDir !== '' ? hist.FinalDir : hist.DestDir);
 
-		var table = '';
-		table += '<tr><td>Total</td><td class="text-right">' + size + '</td></tr>';
-		table += '<tr><td>Files (total/parked)</td><td class="text-center">' + hist.FileCount + ' / ' + hist.RemainingFileCount + '</td></tr>';
-		table += '<tr><td>Articles (total/completion)</td><td class="text-center">' + 
-			(hist.ServerStats.length > 0 ? '<a href="#" id="HistoryEdit_ServStat" data-tab="HistoryEdit_ServStatsTab" title="Per-server statistics">' : '') +
-			hist.TotalArticles + ' / ' + completion + 
-			(hist.ServerStats.length > 0 ? ' <i class="icon-forward" style="opacity:0.6;"></i></a>' : '') +
-			'</td></tr>';
-		$('#HistoryEdit_Statistics').html(table);
-		$('#HistoryEdit_ServStat').click(tabClick);
-		fillServStats();
+			var size = Util.formatSizeMB(hist.FileSizeMB, hist.FileSizeLo);
+			var completion = hist.SuccessArticles + hist.FailedArticles > 0 ? Util.round0(hist.SuccessArticles * 100.0 / (hist.SuccessArticles +  hist.FailedArticles)) + '%' : '--';
 
-		Util.show($('#HistoryEdit_Return'), hist.RemainingFileCount > 0);
-		Util.show($('#HistoryEdit_ReturnURL'), hist.Kind === 'URL');
-		Util.show($('#HistoryEdit_PathGroup, #HistoryEdit_StatisticsGroup, #HistoryEdit_Reprocess'), hist.Kind === 'NZB');
+			var table = '';
+			table += '<tr><td>Total</td><td class="text-right">' + size + '</td></tr>';
+			table += '<tr><td>Files (total/parked)</td><td class="text-center">' + hist.FileCount + ' / ' + hist.RemainingFileCount + '</td></tr>';
+			table += '<tr><td>Articles (total/completion)</td><td class="text-center">' + 
+				(hist.ServerStats.length > 0 ? '<a href="#" id="HistoryEdit_ServStat" data-tab="HistoryEdit_ServStatsTab" title="Per-server statistics">' : '') +
+				hist.TotalArticles + ' / ' + completion + 
+				(hist.ServerStats.length > 0 ? ' <i class="icon-forward" style="opacity:0.6;"></i></a>' : '') +
+				'</td></tr>';
+			$('#HistoryEdit_Statistics').html(table);
+			$('#HistoryEdit_ServStat').click(tabClick);
+			fillServStats();
+		}
+
+		if (hist.Kind !== 'URL')
+		{
+			$('#HistoryEdit_DupeKey').val(hist.DupeKey);
+			$('#HistoryEdit_DupeScore').val(hist.DupeScore);
+			$('#HistoryEdit_DupeMode').val(hist.DupeMode);
+		}
+		
+		Util.show('#HistoryEdit_Return', hist.RemainingFileCount > 0);
+		Util.show('#HistoryEdit_ReturnURL', hist.Kind === 'URL');
+		Util.show('#HistoryEdit_PathGroup, #HistoryEdit_StatisticsGroup, #HistoryEdit_Reprocess', hist.Kind === 'NZB');
+		Util.show('#HistoryEdit_CategoryGroup', hist.Kind !== 'DUP');
+		Util.show('#HistoryEdit_DupGroup', hist.Kind === 'DUP');
+		var dupeCheck = Options.option('DupeCheck') === 'yes';
+		Util.show('#HistoryEdit_MarkGood', dupeCheck && ((hist.Kind === 'NZB' && hist.MarkStatus !== 'GOOD') || (hist.Kind === 'DUP' && hist.DupStatus !== 'GOOD')));
+		Util.show('#HistoryEdit_MarkBad', dupeCheck && hist.Kind !== 'URL');
+		Util.show('#HistoryEdit_Dupe', dupeCheck && hist.Kind !== 'URL');
+		$('#HistoryEdit_CategoryGroup').toggleClass('control-group-last', hist.Kind === 'URL');
 
 		var postParamConfig = ParamTab.createPostParamConfig();
 		var postParam = hist.Kind === 'NZB' && postParamConfig[0].options.length > 0;
 		Util.show('#HistoryEdit_Param', postParam);
-		Util.show('#HistoryEdit_Save', postParam);
-		$('#HistoryEdit_Close').toggleClass('btn-primary', !postParam);
-		$('#HistoryEdit_Close').text(postParam ? 'Cancel' : 'Close');
 		
 		if (postParam)
 		{
 			postParams = ParamTab.buildPostParamTab($HistoryEdit_ParamData, postParamConfig, curHist.Parameters);
 		}
 		
-		EditUI.buildDNZBLinks(curHist.Parameters, 'HistoryEdit_DNZB');
+		EditUI.buildDNZBLinks(curHist.Parameters ? curHist.Parameters : [], 'HistoryEdit_DNZB');
 
 		enableAllButtons();
 		
 		$('#HistoryEdit_GeneralTab').show();
 		$('#HistoryEdit_ParamTab').hide();
 		$('#HistoryEdit_ServStatsTab').hide();
+		$('#HistoryEdit_DupeTab').hide();
 		$('#HistoryEdit_Back').hide();
 		$('#HistoryEdit_BackSpace').show();
 		$HistoryEditDialog.restoreTab();
@@ -1460,13 +1556,16 @@ var HistoryEditDialog = (new function()
 	{
 		e.preventDefault();
 		disableAllButtons();
-		saveParam(function()
-			{
-				notification = '#Notif_History_Reproces';
-				RPC.call('editqueue', ['HistoryProcess', 0, '', [curHist.ID]], completed);
-			});
+		saveCompleted = reprocess;
+		saveDupeKey();
 	}
 
+	function reprocess()
+	{
+		notification = '#Notif_History_Reproces';
+		RPC.call('editqueue', ['HistoryProcess', 0, '', [curHist.ID]], completed);
+	}
+	
 	function completed()
 	{
 		$HistoryEditDialog.modal('hide');
@@ -1483,14 +1582,46 @@ var HistoryEditDialog = (new function()
 		e.preventDefault();
 		disableAllButtons();
 		notification = null;
-		saveParam(completed);
+		saveCompleted = completed;
+		saveDupeKey();
 	}
 	
+	function itemGood(e)
+	{
+		e.preventDefault();
+		ConfirmDialog.showModal('HistoryEditGoodConfirmDialog', doItemGood);
+	}
+	
+	function doItemGood()
+	{
+		disableAllButtons();
+		notification = '#Notif_History_Marked';
+		RPC.call('editqueue', ['HistoryMarkGood', 0, '', [curHist.ID]], completed);
+	}
+	
+	function itemBad(e)
+	{
+		e.preventDefault();
+		ConfirmDialog.showModal('HistoryEditBadConfirmDialog', doItemBad);
+	}
+	
+	function doItemBad()
+	{
+		disableAllButtons();
+		notification = '#Notif_History_Marked';
+		RPC.call('editqueue', ['HistoryMarkBad', 0, '', [curHist.ID]], completed);
+	}
+
 	/*** TAB: POST-PROCESSING PARAMETERS **************************************************/
 
-	function saveParam(_saveParamCompleted)
+	function saveParam()
 	{
-		saveParamCompleted = _saveParamCompleted;
+		if (curHist.Kind === 'DUP')
+		{
+			saveCompleted();
+			return;
+		}
+		
 		var paramList = ParamTab.prepareParamRequest(postParams);
 		saveNextParam(paramList);
 	}
@@ -1508,8 +1639,46 @@ var HistoryEditDialog = (new function()
 		}
 		else
 		{
-			saveParamCompleted();
+			saveCompleted();
 		}
+	}
+
+	/*** TAB: DUPLICATE SETTINGS **************************************************/
+
+	function saveDupeKey()
+	{
+		var value = $('#HistoryEdit_DupeKey').val();
+		value !== curHist.DupeKey ?
+			RPC.call('editqueue', ['HistorySetDupeKey', 0, value, [curHist.ID]], function()
+			{
+				notification = '#Notif_History_Saved';
+				saveDupeScore();
+			})
+			:saveDupeScore();
+	}
+
+	function saveDupeScore()
+	{
+		var value = $('#HistoryEdit_DupeScore').val();
+		value != curHist.DupeScore ?
+			RPC.call('editqueue', ['HistorySetDupeScore', 0, value, [curHist.ID]], function()
+			{
+				notification = '#Notif_History_Saved';
+				saveDupeMode();
+			})
+			:saveDupeMode();
+	}
+	
+	function saveDupeMode()
+	{
+		var value = $('#HistoryEdit_DupeMode').val();
+		value !== curHist.DupeMode ?
+			RPC.call('editqueue', ['HistorySetDupeMode', 0, value, [curHist.ID]], function()
+			{
+				notification = '#Notif_History_Saved';
+				saveParam();
+			})
+			:saveParam();
 	}
 
 	/*** TAB: SERVER STATISTICS **************************************************/

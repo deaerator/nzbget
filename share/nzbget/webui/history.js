@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 793 $
- * $Date: 2013-08-15 19:21:01 +0200 (Thu, 15 Aug 2013) $
+ * $Revision: 852 $
+ * $Date: 2013-09-28 21:53:20 +0200 (Sat, 28 Sep 2013) $
  *
  */
 
@@ -44,6 +44,7 @@ var History = (new function($)
 	var history;
 	var notification = null;
 	var updateTabInfo;
+	var showDup = false;
 
 	this.init = function(options)
 	{
@@ -94,7 +95,7 @@ var History = (new function($)
 			$('#HistoryTable_Category').css('width', DownloadsUI.calcCategoryColumnWidth());
 		}
 
-		RPC.call('history', [], loaded);
+		RPC.call('history', [showDup], loaded);
 	}
 
 	function loaded(curHistory)
@@ -116,9 +117,18 @@ var History = (new function($)
 	{
 		if (hist.Kind === 'NZB')
 		{
-			if (hist.Deleted)
+			if (hist.MarkStatus === 'BAD')
 			{
-				hist.status = hist.HealthDeleted ? 'failure' : 'deleted';
+				hist.status = 'failure';
+			}
+			else if (hist.DeleteStatus !== 'NONE')
+			{
+				switch (hist.DeleteStatus)
+				{
+					case 'HEALTH': hist.status = 'deleted-health'; break;
+					case 'MANUAL': hist.status = 'deleted-manual'; break;
+					case 'DUPE': hist.status = 'deleted-dupe'; break;
+				}
 			}
 			else if (hist.ParStatus == 'FAILURE' || hist.UnpackStatus == 'FAILURE' || hist.MoveStatus == 'FAILURE' || hist.ScriptStatus == 'FAILURE')
 			{
@@ -130,7 +140,7 @@ var History = (new function($)
 			}
 			else if (hist.ParStatus == 'NONE' && hist.UnpackStatus == 'NONE')
 			{
-				hist.status = hist.Health === 1000 ? 'success' : 
+				hist.status = hist.Health === 1000 ? 'success' :
 					hist.Health >= hist.CriticalHealth ? 'damaged' : 'failure';
 			}
 			else
@@ -161,6 +171,21 @@ var History = (new function($)
 				case 'SUCCESS': hist.status = 'success'; break;
 				case 'FAILURE': hist.status = 'failure'; break;
 				case 'UNKNOWN': hist.status = 'unknown'; break;
+				case 'SCAN_FAILURE': hist.status = 'failure'; break;
+				case 'SCAN_SKIPPED': hist.status = 'skipped'; break;
+			}
+		}
+		else if (hist.Kind === 'DUP')
+		{
+			switch (hist.DupStatus)
+			{
+				case 'SUCCESS': hist.status = 'success'; break;
+				case 'FAILURE': hist.status = 'failure'; break;
+				case 'DELETED': hist.status = 'deleted-manual'; break;
+				case 'DUPE': hist.status = 'deleted-dupe'; break;
+				case 'GOOD': hist.status = 'GOOD'; break;
+				case 'BAD': hist.status = 'failure'; break;
+				case 'UNKNOWN': hist.status = 'unknown'; break;
 			}
 		}
 	}
@@ -175,22 +200,32 @@ var History = (new function($)
 
 			var kind = hist.Kind;
 			var statustext = hist.status === 'none' ? 'unknown' : hist.status;
-			var size = kind === 'NZB' ? Util.formatSizeMB(hist.FileSizeMB) : '';
+			var size = kind === 'URL' ? '' : Util.formatSizeMB(hist.FileSizeMB);
+			var time = Util.formatDateTime(hist.HistoryTime + UISettings.timeZoneCorrection*60*60);
+			var dupe = DownloadsUI.buildDupeText(hist.DupeKey, hist.DupeScore, hist.DupeMode);
+			var category = '';
 
 			var textname = hist.Name;
 			if (kind === 'URL')
 			{
 				textname += ' URL';
 			}
+			else if (kind === 'DUP')
+			{
+				textname += ' DUP';
+			}
 
-			var time = Util.formatDateTime(hist.HistoryTime + UISettings.timeZoneCorrection*60*60);
+			if (kind !== 'DUP')
+			{
+				category = hist.Category;
+			}
 
 			var item =
 			{
 				id: hist.ID,
 				hist: hist,
 				data: {time: time, size: size},
-				search: statustext + ' ' + time + ' ' + textname + ' ' + hist.Category + ' ' + size
+				search: statustext + ' ' + time + ' ' + textname + ' ' + dupe + ' ' + category + ' ' + size
 			};
 
 			data.push(item);
@@ -209,20 +244,26 @@ var History = (new function($)
 		var status = HistoryUI.buildStatus(hist.status, '');
 
 		var name = '<a href="#" histid="' + hist.ID + '">' + Util.textToHtml(Util.formatNZBName(hist.Name)) + '</a>';
-		var category = Util.textToHtml(hist.Category);
+		var dupe = DownloadsUI.buildDupe(hist.DupeKey, hist.DupeScore, hist.DupeMode);
+		var category = '';
 
-		if (hist.Kind === 'URL')
+		if (hist.Kind !== 'DUP')
 		{
-			name += ' <span class="label label-info">URL</span>';
+			var category = Util.textToHtml(hist.Category);
+		}
+
+		if (hist.Kind !== 'NZB')
+		{
+			name += ' <span class="label label-info">' + hist.Kind + '</span>';
 		}
 
 		if (!UISettings.miniTheme)
 		{
-			item.fields = ['<div class="check img-check"></div>', status, item.data.time, name, category, item.data.size];
+			item.fields = ['<div class="check img-check"></div>', status, item.data.time, name + dupe, category, item.data.size];
 		}
 		else
 		{
-			var info = '<div class="check img-check"></div><span class="row-title">' + name + '</span>' +
+			var info = '<div class="check img-check"></div><span class="row-title">' + name + '</span>' + dupe +
 				' ' + status + ' <span class="label">' + item.data.time + '</span>';
 			if (category)
 			{
@@ -262,11 +303,6 @@ var History = (new function($)
 
 	this.deleteClick = function()
 	{
-		if (history.length == 0)
-		{
-			return;
-		}
-
 		var checkedRows = $HistoryTable.fasttable('checkedRows');
 		if (checkedRows.length > 0)
 		{
@@ -274,7 +310,7 @@ var History = (new function($)
 		}
 		else
 		{
-			ConfirmDialog.showModal('HistoryClearConfirmDialog', historyClear);
+			Notification.show('#Notif_History_Select');
 		}
 	}
 
@@ -287,23 +323,6 @@ var History = (new function($)
 		RPC.call('editqueue', ['HistoryDelete', 0, '', [IDs]], function()
 		{
 			notification = '#Notif_History_Deleted';
-			editCompleted();
-		});
-	}
-
-	function historyClear()
-	{
-		Refresher.pause();
-
-		var IDs = [];
-		for (var i=0; i<history.length; i++)
-		{
-			IDs.push(history[i].ID);
-		}
-
-		RPC.call('editqueue', ['HistoryDelete', 0, '', [IDs]], function()
-		{
-			notification = '#Notif_History_Cleared';
 			editCompleted();
 		});
 	}
@@ -341,9 +360,18 @@ var History = (new function($)
 		{
 			return;
 		}
-		
+
 		HistoryEditDialog.showModal(hist);
 	}
+
+	this.dupClick = function()
+	{
+		showDup = !showDup;
+		$('#History_Dup').toggleClass('btn-inverse', showDup);
+		$('#History_DupIcon').toggleClass('icon-duplicates', !showDup).toggleClass('icon-duplicates-white', showDup);
+		Refresher.update();
+	}
+
 }(jQuery));
 
 
@@ -359,12 +387,14 @@ var HistoryUI = (new function($)
 		{
 			case 'success':
 			case 'SUCCESS':
-				return '<span class="label label-status label-success">' + prefix + 'success</span>';
+			case 'GOOD':
+				return '<span class="label label-status label-success">' + prefix + status + '</span>';
 			case 'failure':
 			case 'FAILURE':
+			case 'deleted-health':
 				return '<span class="label label-status label-important">' + prefix + 'failure</span>';
-			case 'aborted':
-				return '<span class="label label-status label-important">' + prefix + 'aborted</span>';
+			case 'BAD':
+				return '<span class="label label-status label-important">' + prefix + status + '</span>';
 			case 'unknown':
 			case 'UNKNOWN':
 				return '<span class="label label-status label-info">' + prefix + 'unknown</span>';
@@ -375,9 +405,17 @@ var HistoryUI = (new function($)
 			case 'MANUAL':
 			case 'damaged':
 				return '<span class="label label-status label-warning">' + prefix + status + '</span>';
-			case 'deleted':
-			case 'DELETED':
+			case 'deleted-manual':
 				return '<span class="label label-status">' + prefix + 'deleted</span>';
+			case 'deleted-dupe':
+			case 'edit-deleted-DUPE':
+				return '<span class="label label-status">' + prefix + 'dupe</span>';
+			case 'edit-deleted-MANUAL':
+				return '<span class="label label-status">' + prefix + 'manual</span>';
+			case 'edit-deleted-HEALTH':
+				return '<span class="label label-status label-important">' + prefix + 'health</span>';
+			case 'SCAN_SKIPPED':
+				return '<span class="label label-status">' + prefix + 'skipped</span>';
 			case 'none':
 			case 'NONE':
 				return '<span class="label label-status">' + prefix + 'none</span>';
@@ -385,5 +423,5 @@ var HistoryUI = (new function($)
 				return '<span class="label label-status">' + prefix + status + '</span>';
 		}
 	}
-	
+
 }(jQuery));
