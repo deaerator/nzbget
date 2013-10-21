@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 743 $
- * $Date: 2013-07-20 09:15:21 +0200 (Sat, 20 Jul 2013) $
+ * $Revision: 865 $
+ * $Date: 2013-10-07 18:15:38 +0200 (Mon, 07 Oct 2013) $
  *
  */
 
@@ -304,7 +304,7 @@ var Status = (new function($)
 		// Animate if either any downloads or post-processing is in progress
 		var Anim = (!status.ServerStandBy || status.FeedActive ||
 			(status.PostJobCount > 0 && !status.PostPaused) ||
-			(status.UrlCount > 0 && !status.DownloadPaused && !status.Download2Paused)) &&
+			(status.UrlCount > 0 && ((!status.DownloadPaused && !status.Download2Paused) || Options.option('UrlForce') === 'yes'))) &&
 			(UISettings.refreshInterval !== 0) && !UISettings.connectionError;
 		if (Anim === lastAnimState)
 		{

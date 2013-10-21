@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 851 $
- * $Date: 2013-09-27 22:45:24 +0200 (Fri, 27 Sep 2013) $
+ * $Revision: 871 $
+ * $Date: 2013-10-09 21:37:44 +0200 (Wed, 09 Oct 2013) $
  *
  */
 
@@ -1416,7 +1416,8 @@ var HistoryEditDialog = (new function()
 		$('#HistoryEdit_Title').text(Util.formatNZBName(hist.Name));
 		if (hist.Kind !== 'NZB')
 		{
-			$('#HistoryEdit_Title').html($('#HistoryEdit_Title').html() + '&nbsp;' + '<span class="label label-info">' + hist.Kind + '</span>');
+			$('#HistoryEdit_Title').html($('#HistoryEdit_Title').html() + '&nbsp;' + '<span class="label label-info">' + 
+				(hist.Kind === 'DUP' ? 'hidden' : hist.Kind) + '</span>');
 		}
 
 		if (hist.Kind !== 'DUP')
@@ -1534,14 +1535,15 @@ var HistoryEditDialog = (new function()
 	function itemDelete(e)
 	{
 		e.preventDefault();
-		ConfirmDialog.showModal('HistoryEditDeleteConfirmDialog', doItemDelete);
+		HistoryUI.deleteConfirm(doItemDelete, curHist.Kind === 'NZB', curHist.Kind === 'DUP',
+			curHist.ParStatus === 'FAILURE' || curHist.UnpackStatus === 'FAILURE', false);
 	}
 
-	function doItemDelete()
+	function doItemDelete(command)
 	{
 		disableAllButtons();
 		notification = '#Notif_History_Deleted';
-		RPC.call('editqueue', ['HistoryDelete', 0, '', [curHist.ID]], completed);
+		RPC.call('editqueue', [command, 0, '', [curHist.ID]], completed);
 	}
 
 	function itemReturn(e)

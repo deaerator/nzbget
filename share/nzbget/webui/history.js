@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 852 $
- * $Date: 2013-09-28 21:53:20 +0200 (Sat, 28 Sep 2013) $
+ * $Revision: 873 $
+ * $Date: 2013-10-09 21:43:53 +0200 (Wed, 09 Oct 2013) $
  *
  */
 
@@ -130,7 +130,7 @@ var History = (new function($)
 					case 'DUPE': hist.status = 'deleted-dupe'; break;
 				}
 			}
-			else if (hist.ParStatus == 'FAILURE' || hist.UnpackStatus == 'FAILURE' || hist.MoveStatus == 'FAILURE' || hist.ScriptStatus == 'FAILURE')
+			else if (hist.ParStatus == 'FAILURE' || hist.UnpackStatus == 'FAILURE' || hist.MoveStatus == 'FAILURE')
 			{
 				hist.status = 'failure';
 			}
@@ -138,7 +138,8 @@ var History = (new function($)
 			{
 				hist.status = 'damaged';
 			}
-			else if (hist.ParStatus == 'NONE' && hist.UnpackStatus == 'NONE')
+			else if (hist.ParStatus == 'NONE' && hist.UnpackStatus == 'NONE' &&
+				(hist.ScriptStatus !== 'FAILURE' || hist.Health < 1000))
 			{
 				hist.status = hist.Health === 1000 ? 'success' :
 					hist.Health >= hist.CriticalHealth ? 'damaged' : 'failure';
@@ -148,6 +149,7 @@ var History = (new function($)
 				switch (hist.ScriptStatus)
 				{
 					case 'SUCCESS': hist.status = 'success'; break;
+					case 'FAILURE': hist.status = 'pp-failure'; break;
 					case 'UNKNOWN': hist.status = 'unknown'; break;
 					case 'NONE':
 						switch (hist.UnpackStatus)
@@ -212,7 +214,7 @@ var History = (new function($)
 			}
 			else if (kind === 'DUP')
 			{
-				textname += ' DUP';
+				textname += ' hidden';
 			}
 
 			if (kind !== 'DUP')
@@ -252,9 +254,13 @@ var History = (new function($)
 			var category = Util.textToHtml(hist.Category);
 		}
 
-		if (hist.Kind !== 'NZB')
+		if (hist.Kind === 'URL')
 		{
-			name += ' <span class="label label-info">' + hist.Kind + '</span>';
+			name += ' <span class="label label-info">URL</span>';
+		}
+		else if (hist.Kind === 'DUP')
+		{
+			name += ' <span class="label label-info">hidden</span>';
 		}
 
 		if (!UISettings.miniTheme)
@@ -304,23 +310,36 @@ var History = (new function($)
 	this.deleteClick = function()
 	{
 		var checkedRows = $HistoryTable.fasttable('checkedRows');
-		if (checkedRows.length > 0)
-		{
-			ConfirmDialog.showModal('HistoryDeleteConfirmDialog', historyDelete);
-		}
-		else
+		if (checkedRows.length == 0)
 		{
 			Notification.show('#Notif_History_Select');
+			return;
 		}
+
+		var hasNzb = false;
+		var hasDup = false;
+		var hasFailed = false;
+		for (var i = 0; i < history.length; i++)
+		{
+			var hist = history[i];
+			if (checkedRows.indexOf(hist.ID) > -1)
+			{
+				hasNzb |= hist.Kind === 'NZB';
+				hasDup |= hist.Kind === 'DUP';
+				hasFailed |= hist.ParStatus === 'FAILURE' || hist.UnpackStatus === 'FAILURE';
+			}
+		}
+
+		HistoryUI.deleteConfirm(historyDelete, hasNzb, hasDup, hasFailed, true);
 	}
 
-	function historyDelete()
+	function historyDelete(command)
 	{
 		Refresher.pause();
 
 		var IDs = $HistoryTable.fasttable('checkedRows');
 
-		RPC.call('editqueue', ['HistoryDelete', 0, '', [IDs]], function()
+		RPC.call('editqueue', [command, 0, '', [IDs]], function()
 		{
 			notification = '#Notif_History_Deleted';
 			editCompleted();
@@ -368,7 +387,7 @@ var History = (new function($)
 	{
 		showDup = !showDup;
 		$('#History_Dup').toggleClass('btn-inverse', showDup);
-		$('#History_DupIcon').toggleClass('icon-duplicates', !showDup).toggleClass('icon-duplicates-white', showDup);
+		$('#History_DupIcon').toggleClass('icon-mask', !showDup).toggleClass('icon-mask-white', showDup);
 		Refresher.update();
 	}
 
@@ -404,6 +423,7 @@ var HistoryUI = (new function($)
 			case 'manual':
 			case 'MANUAL':
 			case 'damaged':
+			case 'pp-failure':
 				return '<span class="label label-status label-warning">' + prefix + status + '</span>';
 			case 'deleted-manual':
 				return '<span class="label label-status">' + prefix + 'deleted</span>';
@@ -422,6 +442,49 @@ var HistoryUI = (new function($)
 			default:
 				return '<span class="label label-status">' + prefix + status + '</span>';
 		}
+	}
+
+	this.deleteConfirm = function(actionCallback, hasNzb, hasDup, hasFailed, multi)
+	{
+		var dupeCheck = Options.option('DupeCheck') === 'yes';
+		var cleanupDisk = Options.option('DeleteCleanupDisk') === 'yes';
+		var dialog = null;
+
+		function init(_dialog)
+		{
+			dialog = _dialog;
+
+			if (!multi)
+			{
+				var html = $('#ConfirmDialog_Text').html();
+				html = html.replace(/records/g, 'record');
+				$('#ConfirmDialog_Text').html(html);
+			}
+
+			$('#HistoryDeleteConfirmDialog_Hide', dialog).prop('checked', true);
+			$('#HistoryDeleteConfirmDialog_Cleanup', dialog).prop('checked', false);
+			Util.show($('#HistoryDeleteConfirmDialog_Options', dialog), hasNzb && dupeCheck);
+			Util.show($('#HistoryDeleteConfirmDialog_Simple', dialog), !(hasNzb && dupeCheck));
+			Util.show($('#HistoryDeleteConfirmDialog_DeleteWillCleanup', dialog), hasNzb && hasFailed && cleanupDisk);
+			Util.show($('#HistoryDeleteConfirmDialog_DeleteCanCleanup', dialog), hasNzb && hasFailed && !cleanupDisk);
+			Util.show($('#HistoryDeleteConfirmDialog_DeleteNoCleanup', dialog), !(hasNzb && hasFailed));
+			Util.show($('#HistoryDeleteConfirmDialog_DupAlert', dialog), !hasNzb && dupeCheck && hasDup);
+			Util.show('#ConfirmDialog_Help', hasNzb && dupeCheck);
+		};
+
+		function action()
+		{
+			var hide = $('#HistoryDeleteConfirmDialog_Hide', dialog).is(':checked');
+			var cleanup = $('#HistoryDeleteConfirmDialog_Cleanup', dialog).is(':checked');
+
+			var command = hasNzb && hide ?
+				(cleanup ? 'HistoryDeleteCleanup' : 'HistoryDelete') :
+				(cleanup ? 'HistoryFinalDeleteCleanup' : 'HistoryFinalDelete');
+
+			actionCallback(command);
+		}
+
+		ConfirmDialog.showModal('HistoryDeleteConfirmDialog', action, init);
 	}
 
 }(jQuery));

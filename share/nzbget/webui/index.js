@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 791 $
- * $Date: 2013-08-14 23:10:02 +0200 (Wed, 14 Aug 2013) $
+ * $Revision: 881 $
+ * $Date: 2013-10-17 21:35:43 +0200 (Thu, 17 Oct 2013) $
  *
  */
 
@@ -163,6 +163,7 @@ var Frontend = (new function($)
 		Config.init({ updateTabInfo: updateTabInfo });
 		ConfigBackupRestore.init();
 		ConfirmDialog.init();
+		UpdateDialog.init();
 		AlertDialog.init();
 		ScriptListDialog.init();
 		RestoreSettingsDialog.init();
@@ -763,14 +764,22 @@ var ConfirmDialog = (new function($)
 		$('#ConfirmDialog_OK').click(click);
 	}
 
-	this.showModal = function(id, callback)
+	this.showModal = function(id, _actionCallback, initCallback)
 	{
 		$('#ConfirmDialog_Title').html($('#' + id + '_Title').html());
 		$('#ConfirmDialog_Text').html($('#' + id + '_Text').html());
 		$('#ConfirmDialog_OK').html($('#' + id + '_OK').html());
-		Util.centerDialog($ConfirmDialog, true);
-		actionCallback = callback;
+		var helpId = $('#' + id + '_Help').html();
+		$('#ConfirmDialog_Help').attr('href', '#' + helpId);
+		Util.show('#ConfirmDialog_Help', helpId !== null);
 		
+		actionCallback = _actionCallback;
+		if (initCallback)
+		{
+			initCallback($ConfirmDialog);
+		}
+		
+		Util.centerDialog($ConfirmDialog, true);
 		$ConfirmDialog.modal({backdrop: 'static'});
 		
 		// avoid showing multiple backdrops when the modal is shown from other modal
@@ -793,7 +802,7 @@ var ConfirmDialog = (new function($)
 	function click(event)
 	{
 		event.preventDefault(); // avoid scrolling
-		actionCallback();
+		actionCallback($ConfirmDialog);
 		$ConfirmDialog.modal('hide');
 	}
 }(jQuery));
