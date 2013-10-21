@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 775 $
- * $Date: 2013-08-05 20:09:10 +0200 (Mon, 05 Aug 2013) $
+ * $Revision: 881 $
+ * $Date: 2013-10-17 21:35:43 +0200 (Thu, 17 Oct 2013) $
  *
  */
 
@@ -230,6 +230,7 @@ var Util = (new function($)
 			$elem.css({ top: '' });
 		}
 	}
+	
 }(jQuery));
 
 
@@ -417,7 +418,7 @@ var RPC = (new function($)
 	this.defaultFailureCallback;
 	this.connectErrorMessage = 'Cannot establish connection';
 
-	this.call = function(method, params, completed_callback, failure_callback)
+	this.call = function(method, params, completed_callback, failure_callback, timeout)
 	{
 		var _this = this;
 		
@@ -425,6 +426,11 @@ var RPC = (new function($)
 		var xhr = new XMLHttpRequest();
 
 		xhr.open('post', this.rpcUrl);
+		
+		if (timeout)
+		{
+			xhr.timeout = timeout;
+		}
 
 		// Example for cross-domain access:
 		//xhr.open('post', 'http://localhost:6789/jsonrpc');
