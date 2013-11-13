@@ -17,8 +17,8 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 847 $
- * $Date: 2013-09-26 22:22:28 +0200 (Thu, 26 Sep 2013) $
+ * $Revision: 906 $
+ * $Date: 2013-11-12 21:54:45 +0100 (Tue, 12 Nov 2013) $
  *
  */
 
@@ -79,7 +79,7 @@ var Feeds = (new function($)
 
 	this.fetchAll = function()
 	{
-		RPC.call('fetchfeeds', [], function()
+		RPC.call('fetchfeed', [0], function()
 		{
 			Notification.show('#Notif_Feeds_FetchAll');
 		});

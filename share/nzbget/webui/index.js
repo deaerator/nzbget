@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 881 $
- * $Date: 2013-10-17 21:35:43 +0200 (Thu, 17 Oct 2013) $
+ * $Revision: 904 $
+ * $Date: 2013-11-07 22:01:44 +0100 (Thu, 07 Nov 2013) $
  *
  */
 
@@ -50,11 +50,14 @@ var UISettings = (new function($)
 	this.slideAnimation = true;
 
 	// Automatically set focus to the first control in dialogs.
-	// Not good on touch devices, because may pop up the on-screen-keyboard.
+	// Not good on touch devices, because may pop up an on-screen-keyboard.
 	this.setFocus = false;
 
 	// Show popup notifications.
-	this.showNotifications = true;
+	this.notifications = true;
+
+	// Show badges with duplicate info (downloads and history).
+	this.dupeBadges = false;
 
 	// Time zone correction in hours.
 	// You shouldn't require this unless you can't set the time zone on your computer/device properly.
@@ -272,6 +275,7 @@ var Frontend = (new function($)
 		{
 			case 'Config': Config.show(); break;
 			case 'Messages': Messages.show(); break;
+			case 'History': History.show(); break;
 		}
 	}
 
@@ -281,6 +285,7 @@ var Frontend = (new function($)
 		{
 			case 'Config': Config.hide(); break;
 			case 'Messages': Messages.hide(); break;
+			case 'History': History.hide(); break;
 		}
 		switch (activeTab)
 		{
@@ -840,7 +845,7 @@ var Notification = (new function($)
 	
 	this.show = function(alert, completeFunc)
 	{
-		if (UISettings.showNotifications || $(alert).hasClass('alert-error'))
+		if (UISettings.notifications || $(alert).hasClass('alert-error'))
 		{
 			$(alert).animate({'opacity':'toggle'});
 			var duration = $(alert).attr('data-duration');
