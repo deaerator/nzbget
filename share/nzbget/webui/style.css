@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 881 $
- * $Date: 2013-10-17 21:35:43 +0200 (Thu, 17 Oct 2013) $
+ * $Revision: 887 $
+ * $Date: 2013-10-22 23:04:22 +0200 (Tue, 22 Oct 2013) $
  *
  */
 
@@ -1563,6 +1563,11 @@ div.control-group.last-group {
 #UpdateDialog_Versions #UpdateDialog_AvailRow td:first-child:hover,
 #UpdateDialog_Versions tr:hover td {
 	background-color: #ffffff;
+}
+
+#UpdateProgressDialog {
+	width: 640px;
+	margin-left: -320px;
 }
 
 #UpdateProgressDialog .modal-body {
