@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 905 $
- * $Date: 2013-11-08 22:54:44 +0100 (Fri, 08 Nov 2013) $
+ * $Revision: 907 $
+ * $Date: 2013-11-14 21:17:45 +0100 (Thu, 14 Nov 2013) $
  *
  */
 
@@ -479,7 +479,7 @@ var HistoryUI = (new function($)
 			case 'failure':
 			case 'FAILURE':
 			case 'deleted-health':
-				return '<span class="label label-status label-important">' + prefix + status + '</span>';
+				return '<span class="label label-status label-important">' + prefix + 'failure</span>';
 			case 'BAD':
 				return '<span class="label label-status label-important">' + prefix + status + '</span>';
 			case 'unknown':

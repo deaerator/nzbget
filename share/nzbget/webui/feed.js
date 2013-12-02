@@ -17,8 +17,8 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 906 $
- * $Date: 2013-11-12 21:54:45 +0100 (Tue, 12 Nov 2013) $
+ * $Revision: 913 $
+ * $Date: 2013-11-28 21:46:32 +0100 (Thu, 28 Nov 2013) $
  *
  */
 
@@ -486,7 +486,6 @@ var FeedFilterDialog = (new function($)
 
 		$ItemTable.fasttable('update', []);
 
-		enableAllButtons();
 		$FeedFilterDialog.restoreTab();
 		$(window).on('resize', windowResized);
 		splitterRestore();
@@ -550,7 +549,6 @@ var FeedFilterDialog = (new function($)
 		{
 			if (updating)
 			{
-				//$ItemTable.fasttable('update', []);
 				$LoadingBlock.show();
 			}
 		}, 500);
@@ -559,23 +557,12 @@ var FeedFilterDialog = (new function($)
 	function feedFailure(msg, result)
 	{
 		updating = false;
-		$FeedFilterDialog.modal('hide');
-		AlertDialog.showModal('Error', result ? result.error.message : msg);
-	}
-
-	function disableAllButtons()
-	{
-		$('#FeedFilterDialog .modal-footer .btn').attr('disabled', 'disabled');
-		setTimeout(function()
+		if (firstUpdate)
 		{
-			$('#FeedFilterDialog_Transmit').show();
-		}, 500);
-	}
-
-	function enableAllButtons()
-	{
-		$('#FeedFilterDialog .modal-footer .btn').removeAttr('disabled');
-		$('#FeedFilterDialog_Transmit').hide();
+			$FeedFilterDialog.modal('hide');
+		}
+		$LoadingBlock.hide();
+		AlertDialog.showModal('Error', result ? result.error.message : msg);
 	}
 
 	function itemsLoaded(itemsArr)
