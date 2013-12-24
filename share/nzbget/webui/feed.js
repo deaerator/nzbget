@@ -17,8 +17,8 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 913 $
- * $Date: 2013-11-28 21:46:32 +0100 (Thu, 28 Nov 2013) $
+ * $Revision: 920 $
+ * $Date: 2013-12-16 22:15:49 +0100 (Mon, 16 Dec 2013) $
  *
  */
 
@@ -409,6 +409,7 @@ var FeedFilterDialog = (new function($)
 	var splitStartPos;
 	var feedName;
 	var feedUrl;
+	var feedFilter;
 	var feedPauseNzb;
 	var feedCategory;
 	var feedPriority;
@@ -511,6 +512,7 @@ var FeedFilterDialog = (new function($)
 		$('#FeedFilterDialog_Title').text(name !== '' ? name : 'Feed Preview');
 		feedName = name;
 		feedUrl = url;
+		feedFilter = filter;
 		feedPauseNzb = pauseNzb === 'yes';
 		feedCategory = category;
 		feedPriority = parseInt(priority);
@@ -557,7 +559,8 @@ var FeedFilterDialog = (new function($)
 	function feedFailure(msg, result)
 	{
 		updating = false;
-		if (firstUpdate)
+		var filter = $FilterInput.val().replace(/\n/g, ' % ');
+		if (firstUpdate && filter === feedFilter)
 		{
 			$FeedFilterDialog.modal('hide');
 		}
