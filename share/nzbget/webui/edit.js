@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 924 $
- * $Date: 2013-12-21 22:39:49 +0100 (Sat, 21 Dec 2013) $
+ * $Revision: 925 $
+ * $Date: 2013-12-24 19:38:10 +0100 (Tue, 24 Dec 2013) $
  *
  */
 
@@ -1689,12 +1689,12 @@ var HistoryEditDialog = (new function()
 			RPC.call('editqueue', ['HistorySetDupeMode', 0, value, [curHist.ID]], function()
 			{
 				notification = '#Notif_History_Saved';
-				saveDupeMode();
+				saveDupeBackup();
 			})
-			:saveDupeMode();
+			:saveDupeBackup();
 	}
 
-	function saveDupeMode()
+	function saveDupeBackup()
 	{
 		var canChange = curHist.DeleteStatus === 'DUPE' || curHist.DeleteStatus === 'MANUAL';
 		var oldValue = curHist.DeleteStatus === 'DUPE';
