@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 671 $
- * $Date: 2013-05-08 23:50:47 +0200 (Wed, 08 May 2013) $
+ * $Revision: 900 $
+ * $Date: 2013-11-04 21:59:20 +0100 (Mon, 04 Nov 2013) $
  *
  */
 
@@ -40,12 +40,14 @@ var Downloads = (new function($)
 	var $DownloadsTabBadgeEmpty;
 	var $DownloadQueueEmpty;
 	var $DownloadsRecordsPerPage;
+	var $DownloadsTable_Name;
 
 	// State
 	var notification = null;
 	var updateTabInfo;
 	var groups;
 	var urls;
+	var nameColumnWidth = null;
 
 	this.init = function(options)
 	{
@@ -56,6 +58,7 @@ var Downloads = (new function($)
 		$DownloadsTabBadgeEmpty = $('#DownloadsTabBadgeEmpty');
 		$DownloadQueueEmpty = $('#DownloadQueueEmpty');
 		$DownloadsRecordsPerPage = $('#DownloadsRecordsPerPage');
+		$DownloadsTable_Name = $('#DownloadsTable_Name');
 
 		var recordsPerPage = UISettings.read('$DownloadsRecordsPerPage', 10);
 		$DownloadsRecordsPerPage.val(recordsPerPage);
@@ -93,6 +96,11 @@ var Downloads = (new function($)
 
 	this.update = function()
 	{
+		if (!groups)
+		{
+			$('#DownloadsTable_Category').css('width', DownloadsUI.calcCategoryColumnWidth());
+		}
+		
 		RPC.call('listgroups', [], groups_loaded);
 	}
 
@@ -139,21 +147,18 @@ var Downloads = (new function($)
 
 			if (!found)
 			{
-				// create a virtual group-item
-				var group = {post: post};
-				group.NZBID = post.NZBID;
-				group.NZBName = post.NZBName;
+				// create a virtual group-item:
+				// post-item has most of fields the group-item has,
+				// we use post-item as basis and then add missing fields.
+				group = $.extend({}, post);
+				group.post = post;
 				group.MaxPriority = 0;
-				group.Category = '';
 				group.LastID = 0;
 				group.MinPostTime = 0;
-				group.FileSizeMB = 0;
-				group.FileSizeLo = 0;
 				group.RemainingSizeMB = 0;
 				group.RemainingSizeLo = 0;
 				group.PausedSizeMB = 0;
 				group.PausedSizeLo = 0;
-				group.FileCount = 0;
 				group.RemainingFileCount = 0;
 				group.RemainingParCount = 0;
 
@@ -187,6 +192,11 @@ var Downloads = (new function($)
 		Util.show($DownloadQueueEmpty, groups.length === 0);
 	}
 
+	this.resize = function()
+	{
+		calcProgressLabels();
+	}
+	
 	/*** TABLE *************************************************************************/
 
 	function redraw_table()
@@ -203,13 +213,14 @@ var Downloads = (new function($)
 			var age = Util.formatAge(group.MinPostTime + UISettings.timeZoneCorrection*60*60);
 			var size = Util.formatSizeMB(group.FileSizeMB, group.FileSizeLo);
 			var remaining = Util.formatSizeMB(group.RemainingSizeMB-group.PausedSizeMB, group.RemainingSizeLo-group.PausedSizeLo);
-
+			var dupe = DownloadsUI.buildDupeText(group.DupeKey, group.DupeScore, group.DupeMode);
+			
 			var item =
 			{
 				id: group.NZBID,
 				group: group,
 				data: { age: age, estimated: estimated, size: size, remaining: remaining },
-				search: group.status + ' ' + nametext + ' ' + priority + ' ' + group.Category + ' ' + age + ' ' + size + ' ' + remaining + ' ' + estimated
+				search: group.status + ' ' + nametext + ' ' + priority + ' ' + dupe + ' ' + group.Category + ' ' + age + ' ' + size + ' ' + remaining + ' ' + estimated
 			};
 
 			data.push(item);
@@ -224,21 +235,32 @@ var Downloads = (new function($)
 
 		var status = DownloadsUI.buildStatus(group);
 		var priority = DownloadsUI.buildPriority(group.MaxPriority);
-		var progresslabel = DownloadsUI.buildProgressLabel(group);
+		var progresslabel = DownloadsUI.buildProgressLabel(group, nameColumnWidth);
 		var progress = DownloadsUI.buildProgress(group, item.data.size, item.data.remaining, item.data.estimated);
+		var dupe = DownloadsUI.buildDupe(group.DupeKey, group.DupeScore, group.DupeMode);
 
 		var name = '<a href="#" nzbid="' + group.NZBID + '">' + Util.textToHtml(Util.formatNZBName(group.NZBName)) + '</a>';
+		
+		var health = '';
+		if (group.Health < 1000 && (!group.postprocess ||
+			(group.status === 'pp-queued' && group.post.TotalTimeSec === 0)))
+		{
+			health = ' <span class="label ' + 
+				(group.Health >= group.CriticalHealth ? 'label-warning' : 'label-important') +
+				'">health: ' + Math.floor(group.Health / 10) + '%</span> ';
+		}
+		
 		var category = Util.textToHtml(group.Category);
 
 		if (!UISettings.miniTheme)
 		{
-			var info = name + ' ' + priority + progresslabel;
+			var info = name + ' ' + priority + dupe + health + progresslabel;
 			item.fields = ['<div class="check img-check"></div>', status, info, category, item.data.age, progress, item.data.estimated];
 		}
 		else
 		{
 			var info = '<div class="check img-check"></div><span class="row-title">' + name + '</span>' +
-				' ' + (group.status === 'queued' ? '' : status) + ' ' + priority;
+				' ' + (group.status === 'queued' ? '' : status) + ' ' + priority + dupe + health;
 			if (category)
 			{
 				info += ' <span class="label label-status">' + category + '</span>';
@@ -307,10 +329,28 @@ var Downloads = (new function($)
 		updateTabInfo($DownloadsTabBadge, stat);
 	}
 
+	function calcProgressLabels()
+	{
+		var progressLabels = $('.label-inline', $DownloadsTable);
+
+		if (UISettings.miniTheme)
+		{
+			nameColumnWidth = null;
+			progressLabels.css('max-width', '');
+			return;
+		}
+
+		progressLabels.hide();
+		nameColumnWidth = Math.max($DownloadsTable_Name.width(), 50) - 4*2;  // 4 - padding of span
+		progressLabels.css('max-width', nameColumnWidth);
+		progressLabels.show();
+	}
+	
 	/*** EDIT ******************************************************/
 
-	function itemClick()
+	function itemClick(e)
 	{
+		e.preventDefault();
 		var nzbid = $(this).attr('nzbid');
 		$(this).blur();
 		DownloadsEditDialog.showModal(nzbid, groups);
@@ -468,11 +508,11 @@ var Downloads = (new function($)
 			}
 		};
 
-		var deleteGroups = function()
+		var deleteGroups = function(command)
 		{
 			if (downloadIDs.length > 0)
 			{
-				RPC.call('editqueue', ['GroupDelete', 0, '', downloadIDs], deletePosts);
+				RPC.call('editqueue', [command, 0, '', downloadIDs], deletePosts);
 			}
 			else
 			{
@@ -480,10 +520,7 @@ var Downloads = (new function($)
 			}
 		};
 
-		Util.show('#DownloadsDeleteConfirmDialog_Cleanup', Options.option('DeleteCleanupDisk') === 'yes');
-		Util.show('#DownloadsDeleteConfirmDialog_Remain', Options.option('DeleteCleanupDisk') != 'yes');
-		
-		ConfirmDialog.showModal('DownloadsDeleteConfirmDialog', deleteGroups);
+		DownloadsUI.deleteConfirm(deleteGroups, true);
 	}
 
 	this.moveClick = function(action)
@@ -528,14 +565,18 @@ var DownloadsUI = (new function($)
 {
 	'use strict';
 	
+	// State
+	var categoryColumnWidth = null;
+	var dupeCheck = null;
+	
 	this.fillPriorityCombo = function(combo)
 	{
 		combo.empty();
-		combo.append('<option value="-100">very low</option>');
-		combo.append('<option value="-50">low</option>');
-		combo.append('<option value="0">normal</option>');
-		combo.append('<option value="50">high</option>');
 		combo.append('<option value="100">very high</option>');
+		combo.append('<option value="50">high</option>');
+		combo.append('<option value="0">normal</option>');
+		combo.append('<option value="-50">low</option>');
+		combo.append('<option value="-100">very low</option>');
 	}
 
 	this.fillCategoryCombo = function(combo)
@@ -643,7 +684,7 @@ var DownloadsUI = (new function($)
 		return '';
 	}
 
-	this.buildProgressLabel = function(group)
+	this.buildProgressLabel = function(group, maxWidth)
 	{
 		var text = '';
 		if (group.postprocess && !Status.status.PostPaused)
@@ -674,7 +715,8 @@ var DownloadsUI = (new function($)
 			}
 		}
 
-		return text !== '' ? ' <span class="label label-success">' + text + '</span>' : '';
+		return text !== '' ? ' <span class="label label-success label-inline" style="max-width:' +
+			maxWidth +'px">' + text + '</span>' : '';
 	}
 
 	this.buildPriorityText = function(priority)
@@ -708,5 +750,130 @@ var DownloadsUI = (new function($)
 		{
 			return ' <span class="label label-priority label-info">priority: ' + priority + '</span>';
 		}
+	}
+	
+	function formatDupeText(dupeKey, dupeScore, dupeMode)
+	{
+		dupeKey = dupeKey.replace('rageid=', '');
+		dupeKey = dupeKey.replace('imdb=', '');
+		dupeKey = dupeKey.replace('series=', '');
+		dupeKey = dupeKey.replace('nzb=', '#');
+		dupeKey = dupeKey.replace('=', ' ');
+		dupeKey = dupeKey === '' ? 'title' : dupeKey;
+		return dupeKey;
+	}
+
+	this.buildDupeText = function(dupeKey, dupeScore, dupeMode)
+	{
+		if (dupeCheck == null)
+		{
+			dupeCheck = Options.option('DupeCheck') === 'yes';
+		}
+
+		if (dupeCheck && dupeKey != '' && UISettings.dupeBadges)
+		{
+			return formatDupeText(dupeKey, dupeScore, dupeMode);
+		}
+		else
+		{
+			return '';
+		}
+	}
+
+	this.buildDupe = function(dupeKey, dupeScore, dupeMode)
+	{
+		if (dupeCheck == null)
+		{
+			dupeCheck = Options.option('DupeCheck') === 'yes';
+		}
+
+		if (dupeCheck && dupeKey != '' && UISettings.dupeBadges)
+		{
+			return ' <span class="label' + (dupeMode === 'FORCE' ? ' label-important' : '') +
+				'" title="Duplicate key: ' + dupeKey +
+				(dupeScore !== 0 ? '; score: ' + dupeScore : '') +
+				(dupeMode !== 'SCORE' ? '; mode: ' + dupeMode.toLowerCase() : '') +
+				'">' + formatDupeText(dupeKey, dupeScore, dupeMode) + '</span> ';
+		}
+		else
+		{
+			return '';
+		}
+	}
+
+	this.resetCategoryColumnWidth = function()
+	{
+		categoryColumnWidth = null;
+	}
+
+	this.calcCategoryColumnWidth = function()
+	{
+		if (categoryColumnWidth === null)
+		{
+			var widthHelper = $('<div></div>').css({'position': 'absolute', 'float': 'left', 'white-space': 'nowrap', 'visibility': 'hidden'}).appendTo($('body'));
+
+			// default (min) width
+			categoryColumnWidth = 60;
+
+			for (var i = 1; ; i++)
+			{
+				var opt = Options.option('Category' + i + '.Name');
+				if (!opt)
+				{
+					break;
+				}
+				widthHelper.text(opt);
+				var catWidth = widthHelper.width();
+				categoryColumnWidth = Math.max(categoryColumnWidth, catWidth);
+			}
+						
+			widthHelper.remove();
+			
+			categoryColumnWidth += 'px';
+		}
+
+		return categoryColumnWidth;
+	}
+
+	this.deleteConfirm = function(actionCallback, multi)
+	{
+		var dupeCheck = Options.option('DupeCheck') === 'yes';
+		var cleanupDisk = Options.option('DeleteCleanupDisk') === 'yes';
+		var history = Options.option('KeepHistory') !== '0';
+		var dialog = null;
+
+		function init(_dialog)
+		{
+			dialog = _dialog;
+
+			if (!multi)
+			{
+				var html = $('#ConfirmDialog_Text').html();
+				html = html.replace(/downloads/g, 'download');
+				$('#ConfirmDialog_Text').html(html);
+			}
+
+			$('#DownloadsDeleteConfirmDialog_Delete', dialog).prop('checked', true);
+			$('#DownloadsDeleteConfirmDialog_Delete', dialog).prop('checked', true);
+			$('#DownloadsDeleteConfirmDialog_DeleteDupe', dialog).prop('checked', false);
+			$('#DownloadsDeleteConfirmDialog_DeleteFinal', dialog).prop('checked', false);
+			Util.show($('#DownloadsDeleteConfirmDialog_Options', dialog), history);
+			Util.show($('#DownloadsDeleteConfirmDialog_Simple', dialog), !history);
+			Util.show($('#DownloadsDeleteConfirmDialog_DeleteDupe,#DownloadsDeleteConfirmDialog_DeleteDupeLabel', dialog), dupeCheck);
+			Util.show($('#DownloadsDeleteConfirmDialog_Remain', dialog), !cleanupDisk);
+			Util.show($('#DownloadsDeleteConfirmDialog_Cleanup', dialog), cleanupDisk);
+			Util.show('#ConfirmDialog_Help', history && dupeCheck);
+		};
+
+		function action()
+		{
+			var deleteNormal = $('#DownloadsDeleteConfirmDialog_Delete', dialog).is(':checked');
+			var deleteDupe = $('#DownloadsDeleteConfirmDialog_DeleteDupe', dialog).is(':checked');
+			var deleteFinal = $('#DownloadsDeleteConfirmDialog_DeleteFinal', dialog).is(':checked');
+			var command = deleteNormal ? 'GroupDelete' : (deleteDupe ? 'GroupDupeDelete' : 'GroupFinalDelete');
+			actionCallback(command);
+		}
+
+		ConfirmDialog.showModal('DownloadsDeleteConfirmDialog', action, init);
 	}
 }(jQuery));
