@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 887 $
- * $Date: 2013-10-22 23:04:22 +0200 (Tue, 22 Oct 2013) $
+ * $Revision: 953 $
+ * $Date: 2014-02-19 22:45:56 +0100 (Wed, 19 Feb 2014) $
  *
  */
 
@@ -106,16 +106,8 @@ body.navfixed.scrolled .navbar-fixed-top .navbar-inner {
 	background-position: -176px -80px;
 }
 
-.img-download-orange-orange {
-	background-position: -176px -144px;
-}
-
 .img-download-green {
 	background-position: -112px -80px;
-}
-
-.img-download-green-orange {
-	background-position: -112px -144px;
 }
 
 .img-download-bg {
