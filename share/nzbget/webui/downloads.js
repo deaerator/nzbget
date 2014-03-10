@@ -1,7 +1,7 @@
 /*
  * This file is part of nzbget
  *
- * Copyright (C) 2012-2013 Andrey Prygunkov <hugbug@users.sourceforge.net>
+ * Copyright (C) 2012-2014 Andrey Prygunkov <hugbug@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 900 $
- * $Date: 2013-11-04 21:59:20 +0100 (Mon, 04 Nov 2013) $
+ * $Revision: 949 $
+ * $Date: 2014-02-12 22:24:46 +0100 (Wed, 12 Feb 2014) $
  *
  */
 
@@ -129,47 +129,17 @@ var Downloads = (new function($)
 		for (var i=0, il=posts.length; i < il; i++)
 		{
 			var post = posts[i];
-			var found = false;
 			for (var j=0, jl=groups.length; j < jl; j++)
 			{
 				var group = groups[j];
 				if (group.NZBID === post.NZBID)
 				{
-					found = true;
 					if (!group.post)
 					{
 						group.post = post;
 					}
 					lastPPItemIndex = j;
 					break;
-				}
-			}
-
-			if (!found)
-			{
-				// create a virtual group-item:
-				// post-item has most of fields the group-item has,
-				// we use post-item as basis and then add missing fields.
-				group = $.extend({}, post);
-				group.post = post;
-				group.MaxPriority = 0;
-				group.LastID = 0;
-				group.MinPostTime = 0;
-				group.RemainingSizeMB = 0;
-				group.RemainingSizeLo = 0;
-				group.PausedSizeMB = 0;
-				group.PausedSizeLo = 0;
-				group.RemainingFileCount = 0;
-				group.RemainingParCount = 0;
-
-				// insert it after the last pp-item
-				if (lastPPItemIndex > -1)
-				{
-					groups.splice(lastPPItemIndex + 1, 0, group);
-				}
-				else
-				{
-					groups.unshift(group);
 				}
 			}
 		}
@@ -368,7 +338,7 @@ var Downloads = (new function($)
 
 	/*** CHECKMARKS ******************************************************/
 
-	function checkBuildEditIDList(UseLastID)
+	function checkBuildEditIDList(allowPostProcess)
 	{
 		var checkedRows = $DownloadsTable.fasttable('checkedRows');
 
@@ -379,13 +349,13 @@ var Downloads = (new function($)
 			var group = groups[i];
 			if (checkedRows.indexOf(group.NZBID) > -1)
 			{
-				if (group.postprocess)
+				if (group.postprocess && !allowPostProcess)
 				{
 					Notification.show('#Notif_Downloads_CheckPostProcess');
 					return null;
 				}
 
-				checkedEditIDs.push(UseLastID ? group.LastID : group.NZBID);
+				checkedEditIDs.push(group.NZBID);
 			}
 		}
 
@@ -437,7 +407,7 @@ var Downloads = (new function($)
 
 	this.pauseClick = function()
 	{
-		var checkedEditIDs = checkBuildEditIDList(true);
+		var checkedEditIDs = checkBuildEditIDList(false);
 		if (!checkedEditIDs)
 		{
 			return;
@@ -448,7 +418,7 @@ var Downloads = (new function($)
 
 	this.resumeClick = function()
 	{
-		var checkedEditIDs = checkBuildEditIDList(true);
+		var checkedEditIDs = checkBuildEditIDList(false);
 		if (!checkedEditIDs)
 		{
 			return;
@@ -479,12 +449,9 @@ var Downloads = (new function($)
 			{
 				if (group.postprocess)
 				{
-					postprocessIDs.push(group.post.ID);
+					postprocessIDs.push(group.NZBID);
 				}
-				if (group.LastID > 0)
-				{
-					downloadIDs.push(group.LastID);
-				}
+				downloadIDs.push(group.NZBID);
 			}
 		}
 
