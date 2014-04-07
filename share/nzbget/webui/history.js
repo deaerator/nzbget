@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 907 $
- * $Date: 2013-11-14 21:17:45 +0100 (Thu, 14 Nov 2013) $
+ * $Revision: 966 $
+ * $Date: 2014-03-18 23:35:58 +0100 (Tue, 18 Mar 2014) $
  *
  */
 
@@ -184,13 +184,20 @@ var History = (new function($)
 		}
 		else if (hist.Kind === 'URL')
 		{
-			switch (hist.UrlStatus)
+			if (hist.DeleteStatus !== '')
 			{
-				case 'SUCCESS': hist.status = 'success'; hist.FilterKind = 'SUCCESS'; break;
-				case 'FAILURE': hist.status = 'failure'; hist.FilterKind = 'FAILURE'; break;
-				case 'UNKNOWN': hist.status = 'unknown'; hist.FilterKind = 'FAILURE'; break;
-				case 'SCAN_FAILURE': hist.status = 'failure'; hist.FilterKind = 'FAILURE'; break;
-				case 'SCAN_SKIPPED': hist.status = 'skipped'; hist.FilterKind = 'FAILURE'; break;
+				hist.status = 'deleted-manual'; hist.FilterKind = 'DELETED';
+			}
+			else
+			{
+				switch (hist.UrlStatus)
+				{
+					case 'SUCCESS': hist.status = 'success'; hist.FilterKind = 'SUCCESS'; break;
+					case 'FAILURE': hist.status = 'failure'; hist.FilterKind = 'FAILURE'; break;
+					case 'UNKNOWN': hist.status = 'unknown'; hist.FilterKind = 'FAILURE'; break;
+					case 'SCAN_FAILURE': hist.status = 'failure'; hist.FilterKind = 'FAILURE'; break;
+					case 'SCAN_SKIPPED': hist.status = 'skipped'; hist.FilterKind = 'FAILURE'; break;
+				}
 			}
 		}
 		else if (hist.Kind === 'DUP')
