@@ -1,7 +1,7 @@
 /*!
  * This file is part of nzbget
  *
- * Copyright (C) 2012-2013 Andrey Prygunkov <hugbug@users.sourceforge.net>
+ * Copyright (C) 2012-2014 Andrey Prygunkov <hugbug@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 953 $
- * $Date: 2014-02-19 22:45:56 +0100 (Wed, 19 Feb 2014) $
+ * $Revision: 977 $
+ * $Date: 2014-04-04 22:44:46 +0200 (Fri, 04 Apr 2014) $
  *
  */
 
@@ -771,7 +771,7 @@ form {
 }
 
 .modal.no-footer .modal-body {
-	max-height: 400px;
+	max-height: 420px;
 }
 
 .modal-footer .btn-primary {
@@ -993,6 +993,13 @@ table.table-hidecheck tbody > tr > td:first-child {
 }
 /* END: Progress bars */
 
+input[readonly],
+select[readonly],
+textarea[readonly],
+.uneditable-input {
+  cursor: inherit;
+}
+
 .input-prepend .add-on-small,
 .input-append .add-on-small {
 	font-size: 11px;
@@ -1059,8 +1066,9 @@ table.table-hidecheck tbody > tr > td:first-child {
 }
 
 .form-horizontal .help-block	{
-	margin-top: 6px;
-	line-height: 14px;
+	margin-top: 4px;
+	margin-bottom: -2px;
+	line-height: 18px;
 }
 
 .form-horizontal .help-block-uneditable {
@@ -1114,6 +1122,11 @@ table.table-hidecheck tbody > tr > td:first-child {
   margin-left:-240px;
 }
 
+.modal-large {
+  width: 700px;
+  margin-left:-350px;
+}
+
 .modal-padded-small .modal-body {
   padding-left: 25px;
   padding-right: 25px;
@@ -1122,6 +1135,16 @@ table.table-hidecheck tbody > tr > td:first-child {
 .modal-padded .modal-body {
   padding-left: 40px;
   padding-right: 40px;
+}
+
+.modal-tab-padded {
+  padding-left: 25px;
+  padding-right: 25px;
+}
+
+.modal-tab-padded-small {
+  padding-left: 10px;
+  padding-right: 10px;
 }
 
 .dragover, .dragover .table-striped tbody tr:nth-child(odd) td, .dragover .table-striped tbody tr:nth-child(odd) th {
@@ -1240,10 +1263,6 @@ ul.help > li {
 	margin-top: 20px;
 }
 
-#StatisticsTab table {
-	width: 350px;
-}
-
 .confirm-menu {
 	text-align: left;
 	min-width: 10px;
@@ -1267,6 +1286,67 @@ ul.help > li {
 	margin-top: 0;
 }
 
+/*** STATISTICS DIALOG */
+
+#StatisticsTab table {
+	width: 350px;
+}
+
+#StatDialog_VolumesBlock {
+	text-align: center;
+}
+
+#StatDialog_ChartBlock {
+	height: 300px;
+	width: 100%;
+	margin-top: 15px;
+	margin-bottom: 15px;
+}
+
+#StatDialog_Chart {
+	height: 100%;
+	*width: 670px;
+	width: 100%;
+}
+
+#StatDialog_Tooltip {
+	float: right;
+	margin-top: -3px;
+	margin-bottom: -6px;
+	padding-right: 15px;
+	font-style: italic;
+}
+
+.stat-size {
+	font-weight: bold;
+}
+
+#StatDialog_TooltipSum {
+	font-weight: bold;
+}
+
+#StatDialog_CountersBlock {
+	padding-right: 20px;
+}
+
+#StatDialog_Counters {
+	margin-top: 8px;
+	text-align: center;
+}
+
+#StatDialog_Counters .span3 {
+	min-height: 0;
+}
+
+#StatDialog hr {
+	margin: 5px 10px;
+}
+
+#StatDialog_Custom a,
+#StatDialog_Custom a:hover {
+	color: #000000;
+	cursor: pointer;
+}
 
 /*** CONFIG PAGE */
 #ConfigNav.nav-list a {
@@ -2190,6 +2270,12 @@ body.phone,
   padding-right: 15px;
 }
 
+.phone .modal-tab-padded,
+.phone .modal-tab-padded-small {
+  padding-left: 0;
+  padding-right: 0;
+}
+
 .phone .modal-max .modal-body {
 	position: static;
 }
@@ -2237,7 +2323,32 @@ body.phone,
 	font-size: 18px;
 }
 
+/*** STATISTICS DIALOG */
+
+.phone #StatDialog_Tooltip {
+	margin-top: 3px;
+	margin-bottom: 3px;
+}
+
+.phone #StatDialog hr {
+	margin-top: 30px;
+}
+
 /* MEDIA SMALL SCREENS */
+@media (max-width: 700px) {
+	#ConfigContent [class*="span"] {
+		display: block;
+		float: none;
+		width: auto;
+		margin-left: 0;
+	}
+
+	.modal-large {
+	  width: 600px;
+	  margin-left:-300px;
+	}
+}
+
 @media (max-width: 568px) {
 
 	input[type="checkbox"],
@@ -2294,7 +2405,8 @@ body.phone,
 		width: 95%;
 	}
 
-	.modal-body	{
+	.modal-body,
+	.modal.no-footer .modal-body {
 		max-height: none;
 	}
 
@@ -2309,15 +2421,6 @@ body.phone,
 		left: 20px;
 		width: auto;
 		margin: -10% 0 0;
-	}
-}
-
-@media (max-width: 700px) {
-	#ConfigContent [class*="span"] {
-		display: block;
-		float: none;
-		width: auto;
-		margin-left: 0;
 	}
 }
 

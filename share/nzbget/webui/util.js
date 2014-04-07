@@ -1,7 +1,7 @@
 /*
  * This file is part of nzbget
  *
- * Copyright (C) 2012-2013 Andrey Prygunkov <hugbug@users.sourceforge.net>
+ * Copyright (C) 2012-2014 Andrey Prygunkov <hugbug@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 881 $
- * $Date: 2013-10-17 21:35:43 +0200 (Thu, 17 Oct 2013) $
+ * $Revision: 973 $
+ * $Date: 2014-04-01 23:06:31 +0200 (Tue, 01 Apr 2014) $
  *
  */
 
@@ -99,9 +99,9 @@ var Util = (new function($)
 
 	this.formatSizeMB = function(sizeMB, sizeLo)
 	{
-		if (sizeLo !== undefined && sizeMB < 100)
+		if (sizeLo !== undefined && sizeMB < 1024)
 		{
-			sizeMB = sizeLo / 1024 / 1024;
+			sizeMB = sizeLo / 1024.0 / 1024.0;
 		}
 
 		if (sizeMB > 10240)
@@ -138,9 +138,13 @@ var Util = (new function($)
 		{
 			return this.round0(diff / (60*60*24))  +'&nbsp;d';
 		}
-		else
+		else if (diff > 60*60)
 		{
 			return this.round0(diff / (60*60))  +'&nbsp;h';
+		}
+		else
+		{
+			return this.round0(diff / (60))  +'&nbsp;m';
 		}
 	}
 
@@ -282,6 +286,7 @@ var TabDialog = (new function($)
 		var bodyPadding = 15;
 		var dialogMargin = options.mini ? 0 : 15;
 		var dialogBorder = 2;
+		var toggleClass = options.toggleClass ? options.toggleClass : '';
 
 		var body = $('.modal-body', dialog);
 		var footer = $('.modal-footer', dialog);
@@ -306,6 +311,7 @@ var TabDialog = (new function($)
 
 		fromTab.hide();
 		toTab.show();
+		dialog.toggleClass(toggleClass);
 
 		// CONTROL POINT: at this point the destination dialog size is active
 		// store destination positions and sizes
@@ -335,6 +341,7 @@ var TabDialog = (new function($)
 		toTab.css({position: 'absolute', width: newTabWidth, height: oldBodyHeight, 
 			left: sign * ((options.back ? newTabWidth : oldTabWidth) + bodyPadding*2)});
 		fromTab.show();
+		dialog.toggleClass(toggleClass);
 
 		// animate dialog to destination position and sizes
 
@@ -372,6 +379,7 @@ var TabDialog = (new function($)
 		else
 		{
 			body.animate({height: newBodyHeight}, duration);
+			dialog.animate({width: newDialogWidth, 'margin-left': newDialogMarginLeft}, duration);
 		}
 
 		fromTab.animate({left: sign * -((options.back ? newTabWidth : oldTabWidth) + bodyPadding*2), 
@@ -381,7 +389,8 @@ var TabDialog = (new function($)
 				fromTab.hide();
 				fromTab.css({position: '', width: '', height: '', left: ''});
 				toTab.css({position: '', width: '', height: '', left: ''});
-				dialog.css({overflow: '', width: (fullscreen ? 'auto' : ''), height: (fullscreen ? 'auto' : '')});
+				dialog.css({overflow: '', width: (fullscreen ? 'auto' : ''), height: (fullscreen ? 'auto' : ''), 'margin-left': (fullscreen ? 'auto' : '')});
+				dialog.toggleClass(toggleClass);
 				if (fullscreen)
 				{
 					body.css({position: 'absolute', height: '', left: 0, right: 0, 

@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 881 $
- * $Date: 2013-10-17 21:35:43 +0200 (Thu, 17 Oct 2013) $
+ * $Revision: 978 $
+ * $Date: 2014-04-04 23:45:48 +0200 (Fri, 04 Apr 2014) $
  *
  */
 
@@ -2339,7 +2339,7 @@ var UpdateDialog = (new function($)
 
 		$UpdateDialog.modal({backdrop: 'static'});
 
-		RPC.call('readurl', ['http://nzbget.sourceforge.net/info/nzbget-version.php?nocache=' + new Date().getTime(), 'version info'], loadedUpstreamInfo, error);
+		RPC.call('readurl', ['http://nzbget.net/info/nzbget-version.php?nocache=' + new Date().getTime(), 'version info'], loadedUpstreamInfo, error);
 	}
 	
 	function error(e)
