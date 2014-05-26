@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 979 $
- * $Date: 2014-04-06 01:29:52 +0200 (Sun, 06 Apr 2014) $
+ * $Revision: 1000 $
+ * $Date: 2014-04-22 22:26:29 +0200 (Tue, 22 Apr 2014) $
  *
  */
 
@@ -131,7 +131,7 @@ var Status = (new function($)
 
 		if (status.ServerStandBy)
 		{
-			$StatusSpeed.html('--- KB/s');
+			$StatusSpeed.html('--- MB/s');
 			if (status.ResumeTime > 0)
 			{
 				$StatusTime.html(Util.formatTimeLeft(status.ResumeTime - status.ServerTime));
@@ -154,10 +154,11 @@ var Status = (new function($)
 		}
 		else
 		{
-			$StatusSpeed.html(Util.round0(status.DownloadRate / 1024) + ' KB/s');
+			$StatusSpeed.html(Util.formatSpeed(status.DownloadRate));
 			if (status.DownloadRate > 0)
 			{
-				$StatusTime.html(Util.formatTimeLeft(status.RemainingSizeMB*1024/(status.DownloadRate/1024)));
+				$StatusTime.html(Util.formatTimeLeft(
+					(status.DownloadPaused ? status.ForcedSizeMB : status.RemainingSizeMB) *1024/(status.DownloadRate/1024)));
 			}
 			else
 			{
@@ -538,9 +539,9 @@ var StatDialog = (new function($)
 		$StatDialog_DataTotalDownloaded.html(Util.formatSizeMB(status.DownloadedSizeMB));
 		$StatDialog_DataRemaining.html(Util.formatSizeMB(status.RemainingSizeMB));
 		$StatDialog_DataFree.html(Util.formatSizeMB(status.FreeDiskSpaceMB));
-		$StatDialog_DataAverageSpeed.text(Util.round0(status.AverageDownloadRate / 1024) + ' KB/s');
-		$StatDialog_DataCurrentSpeed.text(Util.round0(status.DownloadRate / 1024) + ' KB/s');
-		$StatDialog_DataSpeedLimit.text(Util.round0(status.DownloadLimit / 1024) + ' KB/s');
+		$StatDialog_DataAverageSpeed.html(Util.formatSpeed(status.AverageDownloadRate));
+		$StatDialog_DataCurrentSpeed.html(Util.formatSpeed(status.DownloadRate));
+		$StatDialog_DataSpeedLimit.html(Util.formatSpeed(status.DownloadLimit));
 
 		var content = '';
 		content += '<tr><td>Download</td><td class="text-right">' +
