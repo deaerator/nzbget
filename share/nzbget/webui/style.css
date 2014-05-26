@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 977 $
- * $Date: 2014-04-04 22:44:46 +0200 (Fri, 04 Apr 2014) $
+ * $Revision: 986 $
+ * $Date: 2014-04-12 23:21:05 +0200 (Sat, 12 Apr 2014) $
  *
  */
 
@@ -665,6 +665,10 @@ ul.dropdown-menu > li > a > i {
 	color: #000000;
 }
 
+.table a.badge-link:hover {
+	text-decoration: none;
+}
+
 table.datatable > tbody > tr > td {
 	word-wrap: break-word;
 }
@@ -1274,12 +1278,12 @@ ul.help > li {
 	text-align: left;
 }
 
-.data-statistics-full {
-	width: 364px;
+.data-statistics {
+	width: 300px;
 }
 
-.data-statistics {
-	width: 290px;
+.data-statistics-full {
+	width: 364px;
 }
 
 .modal-center {
@@ -2291,7 +2295,9 @@ body.phone,
 	padding-right: 0;
 }
 
-.phone .data-statistics {
+.phone .data-statistics,
+.phone .data-statistics-wide,
+.phone .data-statistics-full {
 	width: 100%;
 }
 

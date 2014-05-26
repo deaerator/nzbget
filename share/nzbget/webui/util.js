@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 973 $
- * $Date: 2014-04-01 23:06:31 +0200 (Tue, 01 Apr 2014) $
+ * $Revision: 1007 $
+ * $Date: 2014-04-26 23:40:18 +0200 (Sat, 26 Apr 2014) $
  *
  */
 
@@ -104,19 +104,35 @@ var Util = (new function($)
 			sizeMB = sizeLo / 1024.0 / 1024.0;
 		}
 
-		if (sizeMB > 10240)
+		if (sizeMB >= 1024 * 1024 * 100)
+		{
+			return this.round0(sizeMB / 1024.0 / 1024.0) + '&nbsp;TB';
+		}
+		else if (sizeMB >= 1024 * 1024 * 10)
+		{
+			return this.round1(sizeMB / 1024.0 / 1024.0) + '&nbsp;TB';
+		}
+		else if (sizeMB >= 1024 * 1000)
+		{
+			return this.round2(sizeMB / 1024.0 / 1024.0) + '&nbsp;TB';
+		}
+		else if (sizeMB >= 1024 * 100)
+		{
+			return this.round0(sizeMB / 1024.0) + '&nbsp;GB';
+		}
+		else if (sizeMB >= 1024 * 10)
 		{
 			return this.round1(sizeMB / 1024.0) + '&nbsp;GB';
 		}
-		else if (sizeMB > 1024)
+		else if (sizeMB >= 1000)
 		{
 			return this.round2(sizeMB / 1024.0) + '&nbsp;GB';
 		}
-		else if (sizeMB > 100)
+		else if (sizeMB >= 100)
 		{
 			return this.round0(sizeMB) + '&nbsp;MB';
 		}
-		else if (sizeMB > 10)
+		else if (sizeMB >= 10)
 		{
 			return this.round1(sizeMB) + '&nbsp;MB';
 		}
@@ -126,6 +142,26 @@ var Util = (new function($)
 		}
 	}
 
+	this.formatSpeed = function(bytesPerSec)
+	{
+		if (bytesPerSec >= 100 * 1024 * 1024)
+		{
+			return Util.round0(bytesPerSec / 1024.0 / 1024.0) + '&nbsp;MB/s';
+		}
+		else if (bytesPerSec >= 10 * 1024 * 1024)
+		{
+			return Util.round1(bytesPerSec / 1024.0 / 1024.0) + '&nbsp;MB/s';
+		}
+		else if (bytesPerSec >= 1024 * 1000)
+		{
+			return Util.round2(bytesPerSec / 1024.0 / 1024.0) + '&nbsp;MB/s';
+		}
+		else
+		{
+			return Util.round0(bytesPerSec / 1024.0) + '&nbsp;KB/s';
+		}
+	}
+	
 	this.formatAge = function(time)
 	{
 		if (time == 0)
@@ -389,7 +425,7 @@ var TabDialog = (new function($)
 				fromTab.hide();
 				fromTab.css({position: '', width: '', height: '', left: ''});
 				toTab.css({position: '', width: '', height: '', left: ''});
-				dialog.css({overflow: '', width: (fullscreen ? 'auto' : ''), height: (fullscreen ? 'auto' : ''), 'margin-left': (fullscreen ? 'auto' : '')});
+				dialog.css({overflow: '', width: (fullscreen ? 'auto' : ''), height: (fullscreen ? 'auto' : ''), 'margin-left': (fullscreen ? dialogMargin : '')});
 				dialog.toggleClass(toggleClass);
 				if (fullscreen)
 				{
