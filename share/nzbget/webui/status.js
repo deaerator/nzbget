@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 1000 $
- * $Date: 2014-04-22 22:26:29 +0200 (Tue, 22 Apr 2014) $
+ * $Revision: 1035 $
+ * $Date: 2014-06-02 22:28:36 +0200 (Mon, 02 Jun 2014) $
  *
  */
 
@@ -406,7 +406,7 @@ var StatDialog = (new function($)
 	var mouseOverIndex = -1;
 	var clockOK = false;
 
-	var monthNames = ['January', 'February', 'March', 'April', 'May', 'Juny', 'July', 'August', 'September', 'October', 'November', 'December'];
+	var monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 	this.init = function()
 	{
