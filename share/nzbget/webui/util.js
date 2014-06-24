@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 1007 $
- * $Date: 2014-04-26 23:40:18 +0200 (Sat, 26 Apr 2014) $
+ * $Revision: 1043 $
+ * $Date: 2014-06-13 23:53:27 +0200 (Fri, 13 Jun 2014) $
  *
  */
 
@@ -270,7 +270,22 @@ var Util = (new function($)
 			$elem.css({ top: '' });
 		}
 	}
-	
+
+	this.parseCommaList = function(commaList)
+	{
+		var valueList = commaList.split(/[,;]+/);
+		for (var i=0; i < valueList.length; i++)
+		{
+			valueList[i] = valueList[i].trim();
+			if (valueList[i] === '')
+			{
+				valueList.splice(i, 1);
+				i--;
+			}
+		}
+		return valueList;
+	}
+
 }(jQuery));
 
 

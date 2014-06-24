@@ -17,8 +17,8 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 920 $
- * $Date: 2013-12-16 22:15:49 +0100 (Mon, 16 Dec 2013) $
+ * $Revision: 1045 $
+ * $Date: 2014-06-19 17:00:46 +0200 (Thu, 19 Jun 2014) $
  *
  */
 
@@ -350,8 +350,8 @@ var FeedDialog = (new function($)
 			{
 				name += '.nzb';
 			}
-			RPC.call('appendurl', [name, fetchItems[0].AddCategory, fetchItems[0].Priority, false,
-				fetchItems[0].URL, false, fetchItems[0].DupeKey, fetchItems[0].DupeScore, fetchItems[0].DupeMode],
+			RPC.call('append', [name, fetchItems[0].URL, fetchItems[0].AddCategory, fetchItems[0].Priority, false,
+				false, fetchItems[0].DupeKey, fetchItems[0].DupeScore, fetchItems[0].DupeMode],
 				function()
 			{
 				fetchItems.shift();

@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 1012 $
- * $Date: 2014-05-06 17:36:15 +0200 (Tue, 06 May 2014) $
+ * $Revision: 1043 $
+ * $Date: 2014-06-13 23:53:27 +0200 (Fri, 13 Jun 2014) $
  *
  */
 
@@ -1102,8 +1102,14 @@ var Config = (new function($)
 
 	function switchGetValue(control)
 	{
-		var state = $('.btn-primary', $(control).parent()).val();
+		var state = $('.btn-primary', control).val();
 		return state;
+	}
+
+	function switchSetValue(control, value)
+	{
+		$('.btn', control).removeClass('btn-primary');
+		$('.btn@[value=' + value + ']', control).addClass('btn-primary');
 	}
 
 	/*** CHANGE/ADD/REMOVE OPTIONS *************************************************************/
@@ -1421,6 +1427,20 @@ var Config = (new function($)
 	}
 	this.getOptionValue = getOptionValue;
 
+	function setOptionValue(option, value)
+	{
+		var control = $('#' + option.formId);
+		if (option.type === 'switch')
+		{
+			switchSetValue(control, value);
+		}
+		else
+		{
+			control.val(value);
+		}
+	}
+	this.setOptionValue = setOptionValue;
+	
 	// Checks if there are obsolete or invalid options
 	function invalidOptionsExist()
 	{
@@ -1878,7 +1898,7 @@ var ScriptListDialog = (new function($)
 		Util.show('#ScriptListDialog_OrderInfo', orderMode, 'inline-block');
 
 		buildScriptList();
-		var selectedList = parseCommaList(Config.getOptionValue(option));
+		var selectedList = Util.parseCommaList(Config.getOptionValue(option));
 		updateTable(selectedList);
 
 		$ScriptListDialog.modal({backdrop: 'static'});
@@ -1910,24 +1930,9 @@ var ScriptListDialog = (new function($)
 		$ScriptTable.fasttable('update', data);
 	}
 
-	function parseCommaList(commaList)
-	{
-		var valueList = commaList.split(/[,;]+/);
-		for (var i=0; i < valueList.length; i++)
-		{
-			valueList[i] = valueList[i].trim();
-			if (valueList[i] === '')
-			{
-				valueList.splice(i, 1);
-				i--;
-			}
-		}
-		return valueList;
-	}
-
 	function buildScriptList()
 	{
-		var orderList = parseCommaList(Config.getOptionValue(Config.findOptionByName('ScriptOrder')));
+		var orderList = Util.parseCommaList(Config.getOptionValue(Config.findOptionByName('ScriptOrder')));
 
 		var availableScripts = [];
 		var availableAllScripts = [];
