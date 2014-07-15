@@ -2,7 +2,7 @@
 <!--
  * This file is part of nzbget
  *
- * Copyright (C) 2012-2013 Andrey Prygunkov <hugbug@users.sourceforge.net>
+ * Copyright (C) 2012-2014 Andrey Prygunkov <hugbug@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,8 +18,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 926 $
- * $Date: 2013-12-24 22:00:17 +0100 (Tue, 24 Dec 2013) $
+ * $Revision: 1025 $
+ * $Date: 2014-05-24 14:25:08 +0200 (Sat, 24 May 2014) $
  *
  -->
 
@@ -38,6 +38,8 @@
 	<!-- Libraries -->
 	<script language="javascript" type="text/javascript" src="lib/jquery.min.js"></script>
 	<script language="javascript" type="text/javascript" src="lib/bootstrap.min.js"></script>
+	<script language="javascript" type="text/javascript" src="lib/raphael.min.js"></script>
+	<script language="javascript" type="text/javascript" src="lib/elycharts.min.js"></script>
 
 	<!-- NZBGet -->
 	<script language="javascript" type="text/javascript" src="fasttable.js"></script>
@@ -96,11 +98,9 @@
 					<button id="PlayCaretButton" class="dropdown-toggle" data-toggle="dropdown"><span id="PlayCaret" class="caret"></span></button>
 					<ul class="dropdown-menu menu-check" id="PlayMenu">
 						<li class="menu-header">Pause activities</li>
-						<li><a href="#" onclick="Status.pauseClick('download2')"><table><tr><td><i class="icon-ok" id="CHPauseDownload"></td><td>Pause Download</td></tr></table></a></li>
+						<li><a href="#" onclick="Status.pauseClick('download')"><table><tr><td><i class="icon-ok" id="CHPauseDownload"></td><td>Pause Download</td></tr></table></a></li>
 						<li><a href="#" onclick="Status.pauseClick('post')"><table><tr><td><i class="icon-ok" id="CHPausePostProcess"></td><td>Pause Post-Processing</td></tr></table></a></li>
 						<li><a href="#" onclick="Status.pauseClick('scan')"><table><tr><td><i class="icon-ok" id="CHPauseScan"></td><td>Pause NZB Scan</td></tr></table></a></li>
-						<li class="divider"></li>
-						<li><a href="#" onclick="Status.pauseClick('download')"><table><tr><td><i class="icon-ok" id="CHSoftPauseDownload"></td><td>Soft-Pause Download</td></tr></table></a></li>
 						<li class="divider"></li>
 						<li class="menu-header">Pause for</li>
 						<li><a href="#" onclick="Status.scheduledPauseClick(30*60)"><table><tr><td></td><td>30 Minutes</td></tr></table></a></li>
@@ -521,16 +521,16 @@
 									There are many configuration options affecting performance. If you use
 									NZBGet on a computer with limited capabilities, such as NAS, media player,
 									router, etc. you should take your time to configure NZBGet for best
-									performance - see <a href="http://nzbget.sourceforge.net/Performance_tips">Performance tips</a>.
+									performance - see <a href="http://nzbget.net/Performance_tips">Performance tips</a>.
 									</p>
 
-									<h4>Post-processing scripts settings</h4>
+									<h4>Extension scripts settings</h4>
 									<p>
-									When NZBGet finishes download of a nzb-file it can execute post-processing scripts for further processing (cleanup, etc.).
-									To configure scripts use options in section <em><strong>POST-PROCESSING SCRIPTS</strong></em>.
+									When NZBGet finishes download of a nzb-file it can execute post-processing scripts for further processing (e-mail notification, etc.). 
+									To configure scripts use options in section <em><strong>EXTENSION SCRIPTS</strong></em>.
 									</p>
 									<p>
-									If your post-processing scripts define own options they are also shown here and can be configured like NZBGets built-in options.
+									If your scripts define own options they are also shown here and can be configured like NZBGets built-in options.
 									</p>
 
 									<h4>Backup and restore settings</h4>
@@ -647,8 +647,8 @@
 		<p>Additional exemption: compiling, linking, and/or using OpenSSL is allowed.</p>
 
 		<h2>Contact</h2>
-		<p>For more info please visit <a href="http://nzbget.sourceforge.net">NZBGet Home Page</a>. Among other things the developers of third-party apps find there complete docs about RPC interface.</p>
-		<p>Should you need help, have suggestions or want to share your improvements - <a href="http://nzbget.sourceforge.net/forum">NZBGet Forum</a> is a place to do that.</p>
+		<p>For more info please visit <a href="http://nzbget.net">NZBGet Home Page</a>. Among other things the developers of third-party apps find there complete docs about RPC interface.</p>
+		<p>Should you need help, have suggestions or want to share your improvements - <a href="http://nzbget.net/forum">NZBGet Forum</a> is a place to do that.</p>
 		<p>If you use NZBGet on a media player, router, NAS or other non-PC device the best place to get help is probably forums specialized on your device.</p>
 
 		<h1>Information about included libraries</h1>
@@ -661,6 +661,14 @@
 		<p>NZBGet web-interface uses <a href="http://twitter.github.com/bootstrap/">Twitter Bootstrap</a>. Designed and built with all the love in the world @twitter by @mdo and @fat.</p>
 		<p>Bootstrap code is licensed under the <a href="http://www.apache.org/licenses/LICENSE-2.0">Apache License v2.0</a>.</p>
 
+		<h2>Raphaël</h2>
+		<p>NZBGet web-interface makes use of <a href="http://raphaeljs.com">Raphaël</a> built by Dmitry Baranovskiy.</p>
+		<p>Raphaël code is licensed under the <a href="http://raphaeljs.com/license.html">MIT license</a>.</p>
+
+		<h2>Elycharts</h2>
+		<p>For charts NZBGet relies on <a href="http://elycharts.com">Elycharts</a> by Void Labs s.n.c.</p>
+		<p>Elycharts code is licensed under the <a href="http://creativecommons.org/licenses/MIT/">MIT license</a>.</p>
+
 		<h2>iconSweets</h2>
 		<p>NZBGet web-interface includes selected icons from collections <a href="http://www.iconsweets.com/">iconSweets</a> and <a href="http://www.iconsweets2.com/">iconSweets2</a> by <a href="http://yummygum.com">Yummygum</a>.</p>
 		<p>The icons are generally licensed under a custom license but used in NZBGet with author's permission.</p>
@@ -670,19 +678,121 @@
 
 <!-- *** STATISTICS ************************************************************ -->
 
-<div class="modal modal-mini modal-padded no-footer hide" id="StatDialog">
+<div class="modal modal-mini no-footer hide" id="StatDialog">
 	<div class="modal-header">
-	<a class="close" href='#' data-dismiss="modal"><i class="icon-close"></i></a>
-	<h3>Statistics and Status</h3>
+		<a class="close" href='#' data-dismiss="modal"><i class="icon-close"></i></a>
+		<a class="back" id="StatDialog_Back" href="#" title="Back"><i class="icon-back"></i></a>
+		<a class="back back-hidden" id="StatDialog_BackSpace"><i class="icon-hidden"></i></a>
+		<h3 id="StatDialog_Title">Statistics and Status</h3>
 	</div>
 	<div class="modal-body">
-		<table class="table table-striped table-bordered datatable" id="StatisticsTable">
-			<tbody></tbody>
-		</table>
-		<br>
-		<table class="table table-striped table-bordered datatable" id="StatusTable">
-			<tbody></tbody>
-		</table>
+		<div>
+			<div class="modal-tab" id="StatDialog_GeneralTab">
+				<div class="modal-tab-padded-small">
+					<table class="table table-striped table-bordered datatable" id="StatisticsTable">
+						<tbody>
+							<tr><td>NZBGet version</td><td class="text-right" id="StatDialog_DataVersion"></td></tr>
+							<tr><td>Uptime</td><td class="text-right" id="StatDialog_DataUptime"></td></tr>
+							<tr><td>Download time</td><td class="text-right" id="StatDialog_DataDownloadTime"></td></tr>
+							<tr><td><a href="#" id="StatDialog_Volumes" data-tab="StatDialog_VolumesTab" data-fullscreen1="true"
+								title="Data volume statistics">Total downloaded <i class="icon-forward" style="opacity:0.6;"/></a></td>
+								<td class="text-right" id="StatDialog_DataTotalDownloaded"></td></tr>
+							<tr><td>Remaining</td><td class="text-right" id="StatDialog_DataRemaining"></td></tr>
+							<tr><td>Free disk space</td><td class="text-right" id="StatDialog_DataFree"></td></tr>
+							<tr><td>Average download speed</td><td class="text-right" id="StatDialog_DataAverageSpeed"></td></tr>
+							<tr><td>Current download speed</td><td class="text-right" id="StatDialog_DataCurrentSpeed"></td></tr>
+							<tr><td>Current speed limit</td><td class="text-right" id="StatDialog_DataSpeedLimit"></td></tr>
+						</tbody>
+					</table>
+					<br>
+					<table class="table table-striped table-bordered datatable" id="StatusTable">
+						<tbody></tbody>
+					</table>
+				</div>
+			</div>
+
+			<div class="modal-tab" id="StatDialog_VolumesTab">
+				<div class="btn-toolbar form-inline section-toolbar" id="StatDialog_Toolbar">
+
+					<!-- VOLUME RANGE BUTTONS -->
+					<div class="btn-group phone-hide" id="StatDialog_MonthBlockTop">
+						<button class="btn volume-range btn-inverse" id="StatDialog_Volume_MIN" onclick="StatDialog.chooseRange('MIN')" title="Show last 60 seconds">60 seconds</button>
+						<button class="btn volume-range" id="StatDialog_Volume_HOUR" onclick="StatDialog.chooseRange('HOUR')" title="Show last 60 minutes">60 minutes</button>
+						<button class="btn volume-range" id="StatDialog_Volume_DAY" onclick="StatDialog.chooseRange('DAY')" title="Show last 24 hours">24 hours</button>
+						<button class="btn volume-range" id="StatDialog_Volume_MONTH" onclick="StatDialog.chooseRange('MONTH')" title="Show a month or a whole year">January 2000</button>
+						<button class="btn volume-range dropdown-toggle" id="StatDialog_Volume_MONTH3" data-toggle="dropdown"><span class="caret"></span></button>
+						<ul class="dropdown-menu menu-check pull-right" id="StatDialog_MonthMenu">
+							<li class="menu-header">Months</li>
+							<li class="volume-month-template hide"><a href="#"></a></li>
+							<li class="menu-header" id="StatDialog_MonthMenuYears">Years</li>
+							<li class="divider" id="StatDialog_MonthMenuDivider"></li>
+							<li><a href="#" onclick="StatDialog.chooseOtherMonth()"><i class="icon-empty"></i>Older Periods...</a></li>
+							<li class="volume-menu-template hide"><a href="#"></a></li>
+						</ul>
+					</div>
+					
+					<div class="btn-group phone-only inline"><button class="btn volume-range btn-inverse" id="StatDialog_Volume_MIN2" onclick="StatDialog.chooseRange('MIN')" title="Show last 60 seconds">60 s</button></div>
+					<div class="btn-group phone-only inline"><button class="btn volume-range" id="StatDialog_Volume_HOUR2" onclick="StatDialog.chooseRange('HOUR')" title="Show last 60 minutes">60 m</button></div>
+					<div class="btn-group phone-only inline"><button class="btn volume-range" id="StatDialog_Volume_DAY2" onclick="StatDialog.chooseRange('DAY')" title="Show last 24 hours">24 h</button></div>
+					<div class="btn-group phone-only inline"><button class="btn volume-range" id="StatDialog_Volume_MONTH2" onclick="StatDialog.chooseRange('MONTH')" title="Show one month">Jan 2000</button></div>
+					<!-- MONTH MENU IN MINI-THEME -->
+					<div class="btn-group phone-only inline" id="StatDialog_MonthBlockPhone">
+					<button class="btn volume-range dropdown-toggle" id="StatDialog_Volume_MONTH4" data-toggle="dropdown"><span class="caret"></span></button>
+					</div>
+					
+					<div class="btn-group">
+						<button class="btn dropdown-toggle" id="StatDialog_Server" data-toggle="dropdown" title="News server"> <span id="StatDialog_ServerCap">All news servers</span>&nbsp;<span class="caret"></span></button>
+						<ul class="dropdown-menu menu-check" id="StatDialog_ServerMenu">
+							<li class="menu-header">News servers</li>
+							<li class="volume-server-template hide"><a href="#">1. server.com</a></li>
+							<li class="divider" id="StatDialog_ServerMenuDivider"></li>
+							<li><a href="#" data-id="0" id="StatDialog_ServerMenuAll"><i class="icon-empty"></i>All news servers</a></li>
+						</ul>
+					</div>
+				</div>
+				
+				<div id="StatDialog_Tooltip">Total</div>
+				<div id="StatDialog_ChartBlock"></div>
+				
+				<hr>
+				<div id="StatDialog_CountersBlock">
+				<div class="row-fluid" id="StatDialog_Counters">
+					<div class="span3" id="StatDialog_Today">Today: <span id="StatDialog_TodaySize" class="stat-size">1.5 GB</span></div>
+					<div class="span3" id="StatDialog_Month">This month: <span id="StatDialog_MonthSize" class="stat-size">200 GB</span></div>
+					<div class="span3" id="StatDialog_AllTime">All-time: <span id="StatDialog_AllTimeSize" class="stat-size">20.3 TB</span></div>
+					<div class="span3" id="StatDialog_Custom" title="reset on Fri Apr 04 2014 09:32:24">Custom: <span id="StatDialog_CustomSize" class="stat-size">10.3 TB</span>, <a onclick="StatDialog.resetCounter()">reset</a></div>
+				</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- *** CHART RANGE DIALOG ***************************************************** -->
+
+<div class="modal modal-mini modal-padded modal-center hide" id="StatRangeDialog">
+	<div class="modal-header">
+	<a class="close" href='#' data-dismiss="modal"><i class="icon-close"></i></a>
+	<h3>Choose period</h3>
+	</div>
+	<div class="modal-body">
+		<div class="form-horizontal">
+			<fieldset>
+				<div class="control-group">
+					<label class="control-label" for="StatRangeDialog_PeriodGroup">Period</label>
+					<div class="controls" id="StatRangeDialog_PeriodGroup">
+						<input class="input-mini" id="StatRangeDialog_PeriodInput" size="16" type="text">
+					</div>
+				</div>
+
+				<p class="help-block" ">Type period as <strong>year</strong> or <strong>year-month</strong>, for example:
+				2014 or 2014-12.</p>
+			</fieldset>
+		</div>
+	</div>
+	<div class="modal-footer">
+		<a href="#" class="btn" data-dismiss="modal">Cancel</a>
+		<a href="#" class="btn btn-primary" onclick="StatDialog.setPeriod()">Set Period</a>
 	</div>
 </div>
 
@@ -765,13 +875,8 @@
 	</div>
 	<div class="modal-body">
 	<p>With command <strong>Pause download</strong> you can manually pause the download queue.</p>
-	<p>In addition to manual <em>Pause</em> there is also <em>Soft-Pause</em>, which is maintained by the program: scheduler and post-processing can
-	pause and resume download (see config options <em>PostPauseQueue</em> or <em>ParPauseQueue</em>).
-	In order to keep the scheduler in-sync it's better not to manually change the state of Soft-Pause.
-	However if you control NZBGet using a third-party software, which doesn't distinguigh between manual <em>Pause</em> and <em>Soft-Pause</em>, you may need to control the <em>Soft-Pause</em> manually as well.</p>
-	<p>The download is paused if either manual <em>Pause</em> or <em>Soft-Pause</em> is active.</p>
 	<p>The pausing of <strong>post-processing</strong> depends on how the post-processing-script handles screen output and may not always work.</p>
-	<p>The <strong>Pause/Resume Button</strong> (the round one) pauses or resumes all three activities: download, post-processing and nzb directory scan. The state of <em>Soft-Pause</em> remains unchanged.</p>
+	<p>The <strong>Pause/Resume Button</strong> (the round one) pauses or resumes all three activities: download, post-processing and nzb directory scan.</p>
 	</div>
 </div>
 
@@ -796,7 +901,14 @@
 							<label class="control-label" for="DownloadsEdit_NZBNameGroup">Name</label>
 							<div class="controls" id="DownloadsEdit_NZBNameGroup">
 								<input type="text" class="input-xlarge" id="DownloadsEdit_NZBName" />
-								<p class="help-block help-block-uneditable" id="DownloadsEdit_NZBNameReadonly">Name and other properties cannot be changed for post-processing-downloads.</p>
+								<p class="help-block help-block-uneditable" id="DownloadsEdit_NZBNameReadonly">Cannot be changed for post-processing-downloads.</p>
+							</div>
+						</div>
+
+						<div class="control-group" id="DownloadsEdit_URLGroup">
+							<label class="control-label" for="DownloadsEdit_URL">Link</label>
+							<div class="controls">
+								<input type="text" class="input-xlarge" id="DownloadsEdit_URL" readonly="true" />
 							</div>
 						</div>
 
@@ -808,7 +920,7 @@
 							</div>
 						</div>
 
-						<div class="control-group">
+						<div class="control-group" id="DownloadsEdit_CategoryGroup">
 							<label class="control-label" for="DownloadsEdit_Category">Category</label>
 							<div class="controls">
 								<select id="DownloadsEdit_Category">
@@ -889,6 +1001,18 @@
 				<div class="form-horizontal">
 					<fieldset id="DownloadsEdit_ParamData">
 					</fieldset>
+				</div>
+			</div>
+
+			<div class="modal-tab padded-tab hide" id="DownloadsEdit_ServStatsTab">
+				<div>
+					<div id="DownloadsEdit_ServStatsBlock">
+						<table class="table table-striped table-bordered datatable" id="DownloadsEdit_ServStatsTable">
+							<thead><tr><th>Server</th><th class="text-right">Articles</th><th class="text-right">Art. %</th><th class="text-right">Success</th><th class="text-right">Failures</th></tr></thead>
+							<tbody></tbody>
+						</table>
+					</div>
+					<div class="pull-right hide" id="DownloadsEdit_ServStatsTable_pagerBlock"><div class="pagination" id ="DownloadsEdit_ServStatsTable_pager"></div></div>
 				</div>
 			</div>
 
@@ -1132,6 +1256,13 @@
 							</div>
 						</div>
 
+						<div class="control-group" id="HistoryEdit_URLGroup">
+							<label class="control-label" for="HistoryEdit_URL">Link</label>
+							<div class="controls">
+								<input type="text" class="input-xlarge" id="HistoryEdit_URL" readonly="true" />
+							</div>
+						</div>
+
 						<div class="control-group" id="HistoryEdit_CategoryGroup">
 							<label class="control-label" for="HistoryEdit_Category">Category</label>
 							<div class="controls">
@@ -1186,7 +1317,7 @@
 			<div class="modal-tab padded-tab hide" id="HistoryEdit_ServStatsTab">
 				<div>
 					<div id="HistoryEdit_ServStatsBlock">
-						<table class="table table-striped table-bordered datatable" id="HistoryEdit_ServStatsTable" style="margin-bottom:15px;">
+						<table class="table table-striped table-bordered datatable" id="HistoryEdit_ServStatsTable">
 							<thead><tr><th>Server</th><th class="text-right">Articles</th><th class="text-right">Art. %</th><th class="text-right">Success</th><th class="text-right">Failures</th></tr></thead>
 							<tbody></tbody>
 						</table>
@@ -1608,7 +1739,7 @@
 
 		<p><span class="label label-warning">NOTE:</span>
 		This is a short documentation. For more info visit
-		<a href="http://nzbget.sourceforge.net/RSS">nzbget.sourceforge.net/RSS</a>.
+		<a href="http://nzbget.net/RSS">nzbget.net/RSS</a>.
 		</p>
 	</div>
 </div>
@@ -1814,6 +1945,21 @@
 	<div id="ConfigDeleteConfirmDialog_OK">Delete</div>
 </div>
 
+<!-- *** RESET CUSTOM VOLUME COUNTER CONFIRMATION DIALOG DATA ******************************** -->
+
+<div class="hide" id="StatDialogResetConfirmDialog">
+	<div id="StatDialogResetConfirmDialog_Title">Reset</div>
+	<div id="StatDialogResetConfirmDialog_Text">
+		<p>
+		Reset custom counter for <span id="StatDialogResetConfirmDialog_Server">all news servers</span>?
+		</p>
+		<p class="confirm-help-block">
+		Last reset on <span id="StatDialogResetConfirmDialog_Time">Fri Apr 04 2014 09:32:24</span>.
+		</p>
+	</div>
+	<div id="StatDialogResetConfirmDialog_OK">Reset</div>
+</div>
+
 <!-- *** ADD FILES DIALOG ************************************************************ -->
 
 <div class="modal hide" id="AddDialog">
@@ -1931,7 +2077,7 @@
 		<div class="form-vertical">
 			<fieldset>
 
-				<p id="ScriptListDialog_Instruction">Select scripts for option <strong>DefScript</strong></p>
+				<p id="ScriptListDialog_Instruction">Select scripts for option <strong>PostScript</strong></p>
 
 				<div>
 					<table class="table table-striped table-bordered table-check table-cancheck order-mode datatable" id="ScriptListDialog_ScriptTable" style="margin-bottom:15px;">
@@ -2063,7 +2209,7 @@
 	<p class="alert alert-info">
 	If you compiled the program yourself you know how to update.
 	If you installed a binary package ask maintainer to add support for automatic updates.
-	If you create a public package please read <a href="http://nzbget.sourceforge.net/Packaging" target="_blank">"About Packaging"</a>.
+	If you create a public package please read <a href="http://nzbget.net/Packaging" target="_blank">"About Packaging"</a>.
 	</p>
 	</div>
 	
@@ -2256,6 +2402,10 @@
     <strong>Post-processing-downloads cannot be edited</strong>
 </div>
 
+<div id="Notif_Downloads_CheckURL" data-duration="2000" class="alert alert-error alert-center alert-center-medium hide">
+    <strong>URLs cannot be merged or paused</strong>
+</div>
+
 <div id="Notif_Edit_Select" data-duration="2000" class="alert alert-error alert-center alert-center-small hide">
     <strong>Please select records first</strong>
 </div>
@@ -2331,6 +2481,14 @@
 
 <div id="Notif_Debug" data-duration="400" class="alert alert-inverse alert-center alert-center-small hide">
     <strong>Debug</strong>
+</div>
+
+<div id="Notif_StatRangeError" data-duration="500" class="alert alert-error alert-center alert-center-small hide">
+    <strong>Incorrect period</strong>
+</div>
+
+<div id="Notif_StatReset" data-duration="1000" class="alert alert-inverse alert-center alert-center-small hide">
+    <strong>Volume reset</strong>
 </div>
 
 </body>

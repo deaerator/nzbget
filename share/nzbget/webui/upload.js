@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 836 $
- * $Date: 2013-09-23 22:18:54 +0200 (Mon, 23 Sep 2013) $
+ * $Revision: 1045 $
+ * $Date: 2014-06-19 17:00:46 +0200 (Thu, 19 Jun 2014) $
  *
  */
 
@@ -335,7 +335,7 @@ var Upload = (new function($)
 			var filename = file.name.replace(/\.queued$/g, '');
 			var addPaused = $('#AddDialog_Paused').is(':checked');
 			var dupeMode = $('#AddDialog_DupeForce').is(':checked') ? "FORCE" : "SCORE";
-			RPC.call('append', [filename, category, priority, false, base64str, addPaused, '', 0, dupeMode], fileCompleted, fileFailure);
+			RPC.call('append', [filename, base64str, category, priority, false, addPaused, '', 0, dupeMode], fileCompleted, fileFailure);
 		};
 
 		if (reader.readAsBinaryString)
@@ -379,7 +379,7 @@ var Upload = (new function($)
 		var addPaused = $('#AddDialog_Paused').is(':checked');
 		var dupeMode = $('#AddDialog_DupeForce').is(':checked') ? "FORCE" : "SCORE";
 
-		RPC.call('appendurl', ['', category, priority, false, url, addPaused, '', 0, dupeMode], urlCompleted, urlFailure);
+		RPC.call('append', ['', url, category, priority, false, addPaused, '', 0, dupeMode], urlCompleted, urlFailure);
 	}
 
 	function urlCompleted(result)

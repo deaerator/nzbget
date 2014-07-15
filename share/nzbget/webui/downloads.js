@@ -1,7 +1,7 @@
 /*
  * This file is part of nzbget
  *
- * Copyright (C) 2012-2013 Andrey Prygunkov <hugbug@users.sourceforge.net>
+ * Copyright (C) 2012-2014 Andrey Prygunkov <hugbug@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 900 $
- * $Date: 2013-11-04 21:59:20 +0100 (Mon, 04 Nov 2013) $
+ * $Revision: 1008 $
+ * $Date: 2014-04-27 14:05:56 +0200 (Sun, 27 Apr 2014) $
  *
  */
 
@@ -48,6 +48,25 @@ var Downloads = (new function($)
 	var groups;
 	var urls;
 	var nameColumnWidth = null;
+	var minLevel = null;
+
+	var statusData = {
+		'QUEUED': { Text: 'QUEUED', PostProcess: false },
+		'FETCHING': { Text: 'FETCHING', PostProcess: false },
+		'DOWNLOADING': { Text: 'DOWNLOADING', PostProcess: false },
+		'PP_QUEUED': { Text: 'PP-QUEUED', PostProcess: true },
+		'PAUSED': { Text: 'PAUSED', PostProcess: false },
+		'LOADING_PARS': { Text: 'CHECKING', PostProcess: true },
+		'VERIFYING_SOURCES': { Text: 'CHECKING', PostProcess: true },
+		'REPAIRING': { Text: 'REPAIRING', PostProcess: true },
+		'VERIFYING_REPAIRED': { Text: 'VERIFYING', PostProcess: true },
+		'RENAMING': { Text: 'RENAMING', PostProcess: true },
+		'MOVING': { Text: 'MOVING', PostProcess: true },
+		'UNPACKING': { Text: 'UNPACKING', PostProcess: true },
+		'EXECUTING_SCRIPT': { Text: 'PROCESSING', PostProcess: true },
+		'PP_FINISHED': { Text: 'FINISHED', PostProcess: false }
+		};
+	this.statusData = statusData;
 
 	this.init = function(options)
 	{
@@ -101,85 +120,22 @@ var Downloads = (new function($)
 			$('#DownloadsTable_Category').css('width', DownloadsUI.calcCategoryColumnWidth());
 		}
 		
-		RPC.call('listgroups', [], groups_loaded);
+		RPC.call('listgroups', [100], groups_loaded);
 	}
 
 	function groups_loaded(_groups)
 	{
 		groups = _groups;
-		RPC.call('postqueue', [100], posts_loaded);
-	}
-
-	function posts_loaded(posts)
-	{
-		mergequeues(posts);
 		prepare();
-		RPC.call('urlqueue', [], urls_loaded);
-	}
-
-	function urls_loaded(_urls)
-	{
-		urls = _urls;
 		RPC.next();
-	}
-
-	function mergequeues(posts)
-	{
-		var lastPPItemIndex = -1;
-		for (var i=0, il=posts.length; i < il; i++)
-		{
-			var post = posts[i];
-			var found = false;
-			for (var j=0, jl=groups.length; j < jl; j++)
-			{
-				var group = groups[j];
-				if (group.NZBID === post.NZBID)
-				{
-					found = true;
-					if (!group.post)
-					{
-						group.post = post;
-					}
-					lastPPItemIndex = j;
-					break;
-				}
-			}
-
-			if (!found)
-			{
-				// create a virtual group-item:
-				// post-item has most of fields the group-item has,
-				// we use post-item as basis and then add missing fields.
-				group = $.extend({}, post);
-				group.post = post;
-				group.MaxPriority = 0;
-				group.LastID = 0;
-				group.MinPostTime = 0;
-				group.RemainingSizeMB = 0;
-				group.RemainingSizeLo = 0;
-				group.PausedSizeMB = 0;
-				group.PausedSizeLo = 0;
-				group.RemainingFileCount = 0;
-				group.RemainingParCount = 0;
-
-				// insert it after the last pp-item
-				if (lastPPItemIndex > -1)
-				{
-					groups.splice(lastPPItemIndex + 1, 0, group);
-				}
-				else
-				{
-					groups.unshift(group);
-				}
-			}
-		}
 	}
 
 	function prepare()
 	{
 		for (var j=0, jl=groups.length; j < jl; j++)
 		{
-			detectStatus(groups[j]);
+			var group = groups[j];
+			group.postprocess = statusData[group.Status].PostProcess;
 		}
 	}
 
@@ -208,6 +164,7 @@ var Downloads = (new function($)
 			var group = groups[i];
 
 			var nametext = group.NZBName;
+			var statustext = DownloadsUI.buildStatusText(group);
 			var priority = DownloadsUI.buildPriorityText(group.MaxPriority);
 			var estimated = DownloadsUI.buildEstimated(group);
 			var age = Util.formatAge(group.MinPostTime + UISettings.timeZoneCorrection*60*60);
@@ -220,7 +177,7 @@ var Downloads = (new function($)
 				id: group.NZBID,
 				group: group,
 				data: { age: age, estimated: estimated, size: size, remaining: remaining },
-				search: group.status + ' ' + nametext + ' ' + priority + ' ' + dupe + ' ' + group.Category + ' ' + age + ' ' + size + ' ' + remaining + ' ' + estimated
+				search: statustext + ' ' + nametext + ' ' + priority + ' ' + dupe + ' ' + group.Category + ' ' + age + ' ' + size + ' ' + remaining + ' ' + estimated
 			};
 
 			data.push(item);
@@ -239,28 +196,42 @@ var Downloads = (new function($)
 		var progress = DownloadsUI.buildProgress(group, item.data.size, item.data.remaining, item.data.estimated);
 		var dupe = DownloadsUI.buildDupe(group.DupeKey, group.DupeScore, group.DupeMode);
 
-		var name = '<a href="#" nzbid="' + group.NZBID + '">' + Util.textToHtml(Util.formatNZBName(group.NZBName)) + '</a>';
+		var name = '<a href="#" data-nzbid="' + group.NZBID + '">' + Util.textToHtml(Util.formatNZBName(group.NZBName)) + '</a>';
+
+		var url = '';
+		if (group.Kind === 'URL')
+		{
+			url = '<span class="label label-info">URL</span> ';
+		}
 		
 		var health = '';
 		if (group.Health < 1000 && (!group.postprocess ||
-			(group.status === 'pp-queued' && group.post.TotalTimeSec === 0)))
+			(group.Status === 'PP_QUEUED' && group.PostTotalTimeSec === 0)))
 		{
 			health = ' <span class="label ' + 
 				(group.Health >= group.CriticalHealth ? 'label-warning' : 'label-important') +
 				'">health: ' + Math.floor(group.Health / 10) + '%</span> ';
+		}
+
+		var backup = '';
+		var backupPercent = calcBackupPercent(group);
+		if (backupPercent > 0)
+		{
+			backup = ' <a href="#" data-nzbid="' + group.NZBID + '" data-area="backup" class="badge-link"><span class="label label-warning" title="using backup news servers">backup: ' + 
+				(backupPercent < 10 ? Util.round1(backupPercent) : Util.round0(backupPercent)) + '%</span> ';
 		}
 		
 		var category = Util.textToHtml(group.Category);
 
 		if (!UISettings.miniTheme)
 		{
-			var info = name + ' ' + priority + dupe + health + progresslabel;
+			var info = name + ' ' + url + priority + dupe + health + backup + progresslabel;
 			item.fields = ['<div class="check img-check"></div>', status, info, category, item.data.age, progress, item.data.estimated];
 		}
 		else
 		{
-			var info = '<div class="check img-check"></div><span class="row-title">' + name + '</span>' +
-				' ' + (group.status === 'queued' ? '' : status) + ' ' + priority + dupe + health;
+			var info = '<div class="check img-check"></div><span class="row-title">' + name + '</span>' + url +
+				' ' + (group.Status === 'QUEUED' ? '' : status) + ' ' + priority + dupe + health + backup;
 			if (category)
 			{
 				info += ' <span class="label label-status">' + category + '</span>';
@@ -281,40 +252,45 @@ var Downloads = (new function($)
 			cell.className = 'text-right';
 		}
 	}
-
-	function detectStatus(group)
+	
+	function calcBackupPercent(group)
 	{
-		group.paused = (group.PausedSizeLo != 0) && (group.RemainingSizeLo == group.PausedSizeLo);
-		group.postprocess = group.post !== undefined;
-		if (group.postprocess)
+		var downloadedArticles = group.SuccessArticles + group.FailedArticles;
+		if (downloadedArticles === 0)
 		{
-			switch (group.post.Stage)
+			return 0;
+		}
+		
+		if (minLevel === null)
+		{
+			for (var i=0; i < Status.status.NewsServers.length; i++)
 			{
-				case 'QUEUED': group.status = 'pp-queued'; break;
-				case 'LOADING_PARS': group.status = 'checking'; break;
-				case 'VERIFYING_SOURCES': group.status = 'checking'; break;
-				case 'REPAIRING': group.status = 'repairing'; break;
-				case 'VERIFYING_REPAIRED': group.status = 'verifying'; break;
-				case 'RENAMING': group.status = 'renaming'; break;
-				case 'MOVING': group.status = 'moving'; break;
-				case 'UNPACKING': group.status = 'unpacking'; break;
-				case 'EXECUTING_SCRIPT': group.status = 'processing'; break;
-				case 'FINISHED': group.status = 'finished'; break;
-				default: group.status = 'error: ' + group.post.Stage; break;
+				var server = Status.status.NewsServers[i];
+				var level = parseInt(Options.option('Server' + server.ID + '.Level'));
+				if (minLevel === null || minLevel > level)
+				{
+					minLevel = level;
+				}
+			}	
+		}
+		
+		var backupArticles = 0;
+		for (var j=0; j < group.ServerStats.length; j++)
+		{
+			var stat = group.ServerStats[j];
+			var level = parseInt(Options.option('Server' + stat.ServerID + '.Level'));
+			if (level > minLevel && stat.SuccessArticles > 0)
+			{
+				backupArticles += stat.SuccessArticles;
 			}
 		}
-		else if (group.ActiveDownloads > 0)
+
+		var backupPercent = 0;
+		if (backupArticles > 0)
 		{
-			group.status = 'downloading';
+			backupPercent = backupArticles * 100.0 / downloadedArticles;
 		}
-		else if (group.paused)
-		{
-			group.status = 'paused';
-		}
-		else
-		{
-			group.status = 'queued';
-		}
+		return backupPercent;
 	}
 
 	this.recordsPerPageChange = function()
@@ -351,9 +327,10 @@ var Downloads = (new function($)
 	function itemClick(e)
 	{
 		e.preventDefault();
-		var nzbid = $(this).attr('nzbid');
+		var nzbid = $(this).attr('data-nzbid');
+		var area = $(this).attr('data-area');
 		$(this).blur();
-		DownloadsEditDialog.showModal(nzbid, groups);
+		DownloadsEditDialog.showModal(nzbid, groups, area);
 	}
 
 	function editCompleted()
@@ -368,7 +345,7 @@ var Downloads = (new function($)
 
 	/*** CHECKMARKS ******************************************************/
 
-	function checkBuildEditIDList(UseLastID)
+	function checkBuildEditIDList(allowPostProcess, allowUrl)
 	{
 		var checkedRows = $DownloadsTable.fasttable('checkedRows');
 
@@ -379,13 +356,18 @@ var Downloads = (new function($)
 			var group = groups[i];
 			if (checkedRows.indexOf(group.NZBID) > -1)
 			{
-				if (group.postprocess)
+				if (group.postprocess && !allowPostProcess)
 				{
 					Notification.show('#Notif_Downloads_CheckPostProcess');
 					return null;
 				}
+				if (group.Kind === 'URL' && !allowUrl)
+				{
+					Notification.show('#Notif_Downloads_CheckURL');
+					return null;
+				}
 
-				checkedEditIDs.push(UseLastID ? group.LastID : group.NZBID);
+				checkedEditIDs.push(group.NZBID);
 			}
 		}
 
@@ -402,7 +384,7 @@ var Downloads = (new function($)
 
 	this.editClick = function()
 	{
-		var checkedEditIDs = checkBuildEditIDList(false);
+		var checkedEditIDs = checkBuildEditIDList(false, true);
 		if (!checkedEditIDs)
 		{
 			return;
@@ -420,7 +402,7 @@ var Downloads = (new function($)
 
 	this.mergeClick = function()
 	{
-		var checkedEditIDs = checkBuildEditIDList(false);
+		var checkedEditIDs = checkBuildEditIDList(false, false);
 		if (!checkedEditIDs)
 		{
 			return;
@@ -437,7 +419,7 @@ var Downloads = (new function($)
 
 	this.pauseClick = function()
 	{
-		var checkedEditIDs = checkBuildEditIDList(true);
+		var checkedEditIDs = checkBuildEditIDList(false, false);
 		if (!checkedEditIDs)
 		{
 			return;
@@ -448,7 +430,7 @@ var Downloads = (new function($)
 
 	this.resumeClick = function()
 	{
-		var checkedEditIDs = checkBuildEditIDList(true);
+		var checkedEditIDs = checkBuildEditIDList(false, false);
 		if (!checkedEditIDs)
 		{
 			return;
@@ -472,6 +454,8 @@ var Downloads = (new function($)
 		var checkedRows = $DownloadsTable.fasttable('checkedRows');
 		var downloadIDs = [];
 		var postprocessIDs = [];
+		var hasNzb = false;
+		var hasUrl = false;
 		for (var i = 0; i < groups.length; i++)
 		{
 			var group = groups[i];
@@ -479,12 +463,11 @@ var Downloads = (new function($)
 			{
 				if (group.postprocess)
 				{
-					postprocessIDs.push(group.post.ID);
+					postprocessIDs.push(group.NZBID);
 				}
-				if (group.LastID > 0)
-				{
-					downloadIDs.push(group.LastID);
-				}
+				downloadIDs.push(group.NZBID);
+				hasNzb = hasNzb || group.Kind === 'NZB';
+				hasUrl = hasUrl || group.Kind === 'URL';
 			}
 		}
 
@@ -520,12 +503,12 @@ var Downloads = (new function($)
 			}
 		};
 
-		DownloadsUI.deleteConfirm(deleteGroups, true);
+		DownloadsUI.deleteConfirm(deleteGroups, true, hasNzb, hasUrl);
 	}
 
 	this.moveClick = function(action)
 	{
-		var checkedEditIDs = checkBuildEditIDList(true);
+		var checkedEditIDs = checkBuildEditIDList(true, true);
 		if (!checkedEditIDs)
 		{
 			return;
@@ -572,6 +555,7 @@ var DownloadsUI = (new function($)
 	this.fillPriorityCombo = function(combo)
 	{
 		combo.empty();
+		combo.append('<option value="900">force</option>');
 		combo.append('<option value="100">very high</option>');
 		combo.append('<option value="50">high</option>');
 		combo.append('<option value="0">normal</option>');
@@ -590,36 +574,51 @@ var DownloadsUI = (new function($)
 		}
 	}
 
+	this.buildStatusText = function(group)
+	{
+		var statusText = Downloads.statusData[group.Status].Text;
+		if (statusText === undefined)
+		{
+			statusText = 'Internal error(' + group.Status + ')';
+		}
+		return statusText;
+	}
+		
 	this.buildStatus = function(group)
 	{
-		if (group.postprocess && group.status !== 'pp-queued')
+		var statusText = Downloads.statusData[group.Status].Text;
+		var badgeClass = '';
+		
+		if (group.postprocess && group.Status !== 'PP_QUEUED')
 		{
-			if (Status.status.PostPaused)
-			{
-				return '<span class="label label-status label-warning">' + group.status + '</span>';
-			}
-			else
-			{
-				return '<span class="label label-status label-success">' + group.status + '</span>';
-			}
+			badgeClass = Status.status.PostPaused && group.MinPriority < 900 ? 'label-warning' : 'label-success';
 		}
-		switch (group.status)
+		else if (group.Status === 'DOWNLOADING' || group.Status === 'FETCHING')
 		{
-			case 'pp-queued': return '<span class="label label-status">pp-queued</span>';
-			case 'downloading': return '<span class="label label-status label-success">downloading</span>';
-			case 'paused': return '<span class="label label-status label-warning">paused</span>';
-			case 'queued': return '<span class="label label-status">queued</span>';
-			default: return '<span class="label label-status label-important">internal error(' + group.status + ')</span>';
+			badgeClass = 'label-success';
 		}
+		else if (group.Status === 'PAUSED')
+		{
+			badgeClass = 'label-warning';
+		}
+		else if (statusText === undefined)
+		{
+			statusText = 'INTERNAL_ERROR (' + group.Status + ')';
+			badgeClass = 'label-important';
+		}
+		
+		return '<span class="label label-status ' + badgeClass + '">' + statusText + '</span>';
 	}
 
 	this.buildProgress = function(group, totalsize, remaining, estimated)
 	{
-		if (group.status === 'downloading' || (group.postprocess && !Status.status.PostPaused))
+		if (group.Status === 'DOWNLOADING' ||
+			(group.postprocess && !(Status.status.PostPaused && group.MinPriority < 900)))
 		{
 			var kind = 'progress-success';
 		}
-		else if (group.status === 'paused' || (group.postprocess && Status.status.PostPaused))
+		else if (group.Status === 'PAUSED' ||
+			(group.postprocess && !(Status.status.PostPaused && group.MinPriority < 900)))
 		{
 			var kind = 'progress-warning';
 		}
@@ -637,7 +636,13 @@ var DownloadsUI = (new function($)
 		{
 			totalsize = '';
 			remaining = '';
-			percent = Math.round(group.post.StageProgress / 10);
+			percent = Math.round(group.PostStageProgress / 10);
+		}
+		
+		if (group.Kind === 'URL')
+		{
+			totalsize = '';
+			remaining = '';
 		}
 
 		if (!UISettings.miniTheme)
@@ -671,12 +676,12 @@ var DownloadsUI = (new function($)
 	{
 		if (group.postprocess)
 		{
-			if (group.post.StageProgress > 0)
+			if (group.PostStageProgress > 0)
 			{
-				return Util.formatTimeLeft(group.post.StageTimeSec / group.post.StageProgress * (1000 - group.post.StageProgress));
+				return Util.formatTimeLeft(group.PostStageTimeSec / group.PostStageProgress * (1000 - group.PostStageProgress));
 			}
 		}
-		else if (!group.paused && Status.status.DownloadRate > 0)
+		else if (group.Status !== 'PAUSED' && Status.status.DownloadRate > 0)
 		{
 			return Util.formatTimeLeft((group.RemainingSizeMB-group.PausedSizeMB)*1024/(Status.status.DownloadRate/1024));
 		}
@@ -687,9 +692,9 @@ var DownloadsUI = (new function($)
 	this.buildProgressLabel = function(group, maxWidth)
 	{
 		var text = '';
-		if (group.postprocess && !Status.status.PostPaused)
+		if (group.postprocess && !(Status.status.PostPaused && group.MinPriority < 900))
 		{
-			switch (group.post.Stage)
+			switch (group.Status)
 			{
 				case "REPAIRING":
 					break;
@@ -698,18 +703,18 @@ var DownloadsUI = (new function($)
 				case "VERIFYING_REPAIRED":
 				case "UNPACKING":
 				case "RENAMING":
-					text = group.post.ProgressLabel;
+					text = group.PostInfoText;
 					break;
 				case "EXECUTING_SCRIPT":
-					if (group.post.Log && group.post.Log.length > 0)
+					if (group.Log && group.Log.length > 0)
 					{
-						text = group.post.Log[group.post.Log.length-1].Text;
+						text = group.Log[group.Log.length-1].Text;
 						// remove "for <nzb-name>" from label text
 						text = text.replace(' for ' + group.NZBName, ' ');
 					}
 					else
 					{
-						text = group.post.ProgressLabel;
+						text = group.PostInfoText;
 					}
 					break;
 			}
@@ -724,6 +729,7 @@ var DownloadsUI = (new function($)
 		switch (priority)
 		{
 			case 0: return '';
+			case 900: return 'force priority';
 			case 100: return 'very high priority';
 			case 50: return 'high priority';
 			case -50: return 'low priority';
@@ -737,6 +743,7 @@ var DownloadsUI = (new function($)
 		switch (priority)
 		{
 			case 0: return '';
+			case 900: return ' <span class="label label-priority label-important">force priority</span>';
 			case 100: return ' <span class="label label-priority label-important">very high priority</span>';
 			case 50: return ' <span class="label label-priority label-important">high priority</span>';
 			case -50: return ' <span class="label label-priority label-info">low priority</span>';
@@ -835,7 +842,7 @@ var DownloadsUI = (new function($)
 		return categoryColumnWidth;
 	}
 
-	this.deleteConfirm = function(actionCallback, multi)
+	this.deleteConfirm = function(actionCallback, multi, hasNzb, hasUrl)
 	{
 		var dupeCheck = Options.option('DupeCheck') === 'yes';
 		var cleanupDisk = Options.option('DeleteCleanupDisk') === 'yes';
@@ -859,10 +866,10 @@ var DownloadsUI = (new function($)
 			$('#DownloadsDeleteConfirmDialog_DeleteFinal', dialog).prop('checked', false);
 			Util.show($('#DownloadsDeleteConfirmDialog_Options', dialog), history);
 			Util.show($('#DownloadsDeleteConfirmDialog_Simple', dialog), !history);
-			Util.show($('#DownloadsDeleteConfirmDialog_DeleteDupe,#DownloadsDeleteConfirmDialog_DeleteDupeLabel', dialog), dupeCheck);
-			Util.show($('#DownloadsDeleteConfirmDialog_Remain', dialog), !cleanupDisk);
-			Util.show($('#DownloadsDeleteConfirmDialog_Cleanup', dialog), cleanupDisk);
-			Util.show('#ConfirmDialog_Help', history && dupeCheck);
+			Util.show($('#DownloadsDeleteConfirmDialog_DeleteDupe,#DownloadsDeleteConfirmDialog_DeleteDupeLabel', dialog), dupeCheck && hasNzb);
+			Util.show($('#DownloadsDeleteConfirmDialog_Remain', dialog), !cleanupDisk && hasNzb);
+			Util.show($('#DownloadsDeleteConfirmDialog_Cleanup', dialog), cleanupDisk && hasNzb);
+			Util.show('#ConfirmDialog_Help', history && dupeCheck && hasNzb);
 		};
 
 		function action()

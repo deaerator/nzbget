@@ -1,7 +1,7 @@
 /*
  * This file is part of nzbget
  *
- * Copyright (C) 2012-2013 Andrey Prygunkov <hugbug@users.sourceforge.net>
+ * Copyright (C) 2012-2014 Andrey Prygunkov <hugbug@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * $Revision: 925 $
- * $Date: 2013-12-24 19:38:10 +0100 (Tue, 24 Dec 2013) $
+ * $Revision: 1043 $
+ * $Date: 2014-06-13 23:53:27 +0200 (Fri, 13 Jun 2014) $
  *
  */
 
@@ -30,9 +30,9 @@
  *   4) Download split dialog;
  *   5) History edit dialog.
  */
- 
+
 /*** DOWNLOAD EDIT DIALOG ************************************************************/
- 
+
 var DownloadsEditDialog = (new function($)
 {
 	'use strict';
@@ -42,7 +42,8 @@ var DownloadsEditDialog = (new function($)
 	var $DownloadsLogTable;
 	var $DownloadsFileTable;
 	var $DownloadsEdit_ParamData;
-	
+	var $ServStatsTable;
+
 	// State
 	var curGroup;
 	var notification = null;
@@ -51,6 +52,9 @@ var DownloadsEditDialog = (new function($)
 	var lastFullscreen;
 	var logFilled;
 	var files;
+	var refreshTimer = 0;
+	var showing;
+	var oldCategory;
 
 	this.init = function()
 	{
@@ -64,6 +68,7 @@ var DownloadsEditDialog = (new function($)
 		$('#DownloadsEdit_CancelPP').click(itemCancelPP);
 		$('#DownloadsEdit_Param, #DownloadsEdit_Log, #DownloadsEdit_File, #DownloadsEdit_Dupe').click(tabClick);
 		$('#DownloadsEdit_Back').click(backClick);
+		$('#DownloadsEdit_Category').change(categoryChange);
 
 		$DownloadsLogTable = $('#DownloadsEdit_LogTable');
 		$DownloadsLogTable.fasttable(
@@ -76,7 +81,7 @@ var DownloadsEditDialog = (new function($)
 				hasHeader: true,
 				renderCellCallback: logTableRenderCellCallback
 			});
-			
+
 		$DownloadsFileTable = $('#DownloadsEdit_FileTable');
 		$DownloadsFileTable.fasttable(
 			{
@@ -89,24 +94,36 @@ var DownloadsEditDialog = (new function($)
 				renderCellCallback: fileTableRenderCellCallback
 			});
 
+		$ServStatsTable = $('#DownloadsEdit_ServStatsTable');
+		$ServStatsTable.fasttable(
+			{
+				filterInput: '#DownloadsEdit_ServStatsTable_filter',
+				pagerContainer: '#DownloadsEdit_ServStatsTable_pager',
+				pageSize: 100,
+				maxPages: 3,
+				hasHeader: true,
+				renderCellCallback: EditUI.servStatsTableRenderCellCallback
+			});
+
 		$DownloadsFileTable.on('click', 'tbody div.check',
 			function(event) { $DownloadsFileTable.fasttable('itemCheckClick', this.parentNode.parentNode, event); });
 		$DownloadsFileTable.on('click', 'thead div.check',
 			function() { $DownloadsFileTable.fasttable('titleCheckClick') });
 		$DownloadsFileTable.on('mousedown', Util.disableShiftMouseDown);
-			
+
 		$DownloadsEditDialog.on('hidden', function()
 		{
 			// cleanup
 			$DownloadsLogTable.fasttable('update', []);
 			$DownloadsFileTable.fasttable('update', []);
 			$DownloadsEdit_ParamData.empty();
+			clearTimeout(refreshTimer);
 			// resume updates
 			Refresher.resume();
 		});
 
 		TabDialog.extend($DownloadsEditDialog);
-		
+
 		if (UISettings.setFocus)
 		{
 			$DownloadsEditDialog.on('shown', function()
@@ -119,7 +136,7 @@ var DownloadsEditDialog = (new function($)
 		}
 	}
 
-	this.showModal = function(nzbid, allGroups)
+	this.showModal = function(nzbid, allGroups, area)
 	{
 		var group = null;
 
@@ -146,27 +163,39 @@ var DownloadsEditDialog = (new function($)
 		var age = Util.formatAge(group.MinPostTime + UISettings.timeZoneCorrection*60*60);
 		var size = Util.formatSizeMB(group.FileSizeMB, group.FileSizeLo);
 		var remaining = Util.formatSizeMB(group.RemainingSizeMB-group.PausedSizeMB, group.RemainingSizeLo-group.PausedSizeLo);
-		var unpausedSize = Util.formatSizeMB(group.PausedSizeMB, group.PausedSizeLo);
-		var estimated = group.paused ? '' : (Status.status.DownloadRate > 0 ? Util.formatTimeHMS((group.RemainingSizeMB-group.PausedSizeMB)*1024/(Status.status.DownloadRate/1024)) : '');
+		var pausedSize = Util.formatSizeMB(group.PausedSizeMB, group.PausedSizeLo);
+		var estimated = group.Status === 'PAUSED' ? '' : (Status.status.DownloadRate > 0 ? Util.formatTimeHMS((group.RemainingSizeMB-group.PausedSizeMB)*1024/(Status.status.DownloadRate/1024)) : '');
+		var completion = group.SuccessArticles + group.FailedArticles > 0 ? Util.round0(group.SuccessArticles * 100.0 / (group.SuccessArticles +  group.FailedArticles)) + '%' : '--';
 
 		var table = '';
-		table += '<tr><td>Age</td><td class="text-right">' + age + '</td></tr>';
+		//table += '<tr><td>Age</td><td class="text-right">' + age + '</td></tr>';
 		table += '<tr><td>Total</td><td class="text-right">' + size + '</td></tr>';
-		table += '<tr><td>Paused</td><td class="text-right">' + unpausedSize + '</td></tr>';
+		table += '<tr><td>Paused</td><td class="text-right">' + pausedSize + '</td></tr>';
 		table += '<tr><td>Unpaused</td><td class="text-right">' + remaining + '</td></tr>';
+		//table += '<tr><td>Size (total/remaining/paused)</td><td class="text-right">4.10 / 4.10 / 0.00 GB</td></tr>';
 		//table += '<tr><td>Active downloads</td><td class="text-right">' + group.ActiveDownloads + '</td></tr>';
 		//table += '<tr><td>Estimated time</td><td class="text-right">' + estimated + '</td></tr>';
-		table += '<tr><td>Health (current/critical)</td><td class="text-center">' + Math.floor(group.Health / 10) + 
-			'% / ' + Math.floor(group.CriticalHealth / 10) + '%</td></tr>';
-		table += '<tr><td>Files (total/remaining/pars)</td><td class="text-center">' + group.FileCount + ' / ' +
+		table += '<tr><td>Health (critical/current)</td><td class="text-right">' +
+			Math.floor(group.CriticalHealth / 10) + '% / ' + Math.floor(group.Health / 10) + '%</td></tr>';
+		table += '<tr><td>Files (total/remaining/pars)</td><td class="text-right">' + group.FileCount + ' / ' +
 			group.RemainingFileCount + ' / ' + group.RemainingParCount + '</td></tr>';
+		table += '<tr><td>' +
+			(group.ServerStats.length > 0 ? '<a href="#" id="DownloadsEdit_ServStats" data-tab="DownloadsEdit_ServStatsTab" title="Per-server statistics">' : '') +
+			'Articles (total/completion)' +
+			(group.ServerStats.length > 0 ? ' <i class="icon-forward" style="opacity:0.6;"></i></a>' : '') +
+			'</td><td class="text-right">' + group.TotalArticles + ' / ' + completion + '</td></tr>';
 		$('#DownloadsEdit_Statistics').html(table);
 
-		$('#DownloadsEdit_Title').text(Util.formatNZBName(group.NZBName));
-		$('DownloadsEdit_Title').html($('#DownloadsEdit_Title').html() + '&nbsp;' + status);
+		$('#DownloadsEdit_ServStats').click(tabClick);
+		EditUI.fillServStats($ServStatsTable, group);
+		$ServStatsTable.fasttable('setCurPage', 1);
+
+		$('#DownloadsEdit_Title').html(Util.formatNZBName(group.NZBName) +
+		    (group.Kind === 'URL' ? '&nbsp;<span class="label label-info">URL</span>' : ''));
 
 		$('#DownloadsEdit_NZBName').attr('value', group.NZBName);
 		$('#DownloadsEdit_NZBName').attr('readonly', group.postprocess);
+		$('#DownloadsEdit_URL').attr('value', group.URL);
 
 		// Priority
 		var v = $('#DownloadsEdit_Priority');
@@ -179,7 +208,7 @@ var DownloadsEditDialog = (new function($)
 		v.attr('disabled', 'disabled');
 
 		// Category
-		var v = $('#DownloadsEdit_Category');
+		v = $('#DownloadsEdit_Category');
 		DownloadsUI.fillCategoryCombo(v);
 		v.val(group.Category);
 		if (v.val() != group.Category)
@@ -191,22 +220,26 @@ var DownloadsEditDialog = (new function($)
 		$('#DownloadsEdit_DupeKey').val(group.DupeKey);
 		$('#DownloadsEdit_DupeScore').val(group.DupeScore);
 		$('#DownloadsEdit_DupeMode').val(group.DupeMode);
-		
+
 		$DownloadsLogTable.fasttable('update', []);
 		$DownloadsFileTable.fasttable('update', []);
 
 		var postParamConfig = ParamTab.createPostParamConfig();
-		
+
 		Util.show('#DownloadsEdit_NZBNameReadonly', group.postprocess);
 		Util.show('#DownloadsEdit_CancelPP', group.postprocess);
 		Util.show('#DownloadsEdit_Delete', !group.postprocess);
-		Util.show('#DownloadsEdit_Pause', !group.postprocess);
+		Util.show('#DownloadsEdit_Pause', group.Kind === 'NZB' && !group.postprocess);
 		Util.show('#DownloadsEdit_Resume', false);
 		Util.show('#DownloadsEdit_Save', !group.postprocess);
+		Util.show('#DownloadsEdit_StatisticsGroup', group.Kind === 'NZB');
+		Util.show('#DownloadsEdit_File', group.Kind === 'NZB');
+		Util.show('#DownloadsEdit_URLGroup', group.Kind === 'URL');
+		$('#DownloadsEdit_CategoryGroup').toggleClass('control-group-last', group.Kind === 'URL');
 		var dupeCheck = Options.option('DupeCheck') === 'yes';
 		Util.show('#DownloadsEdit_Dupe', dupeCheck);
-		var postParam = postParamConfig[0].options.length > 0;
-		var postLog = group.postprocess && group.post.Log.length > 0;
+		var postParam = postParamConfig[0].options.length > 0 && group.Kind === 'NZB';
+		var postLog = group.postprocess && group.Log.length > 0;
 		Util.show('#DownloadsEdit_Param', postParam);
 		Util.show('#DownloadsEdit_Log', postLog);
 
@@ -226,7 +259,8 @@ var DownloadsEditDialog = (new function($)
 			$('#DownloadsEdit_Close').removeClass('btn-primary');
 			$('#DownloadsEdit_Close').text('Cancel');
 
-			if (group.RemainingSizeHi == group.PausedSizeHi && group.RemainingSizeLo == group.PausedSizeLo)
+			if (group.RemainingSizeHi == group.PausedSizeHi && group.RemainingSizeLo == group.PausedSizeLo &&
+			    group.Kind === 'NZB')
 			{
 				$('#DownloadsEdit_Resume').show();
 				$('#DownloadsEdit_Pause').hide();
@@ -239,18 +273,19 @@ var DownloadsEditDialog = (new function($)
 		}
 
 		EditUI.buildDNZBLinks(curGroup.Parameters, 'DownloadsEdit_DNZB');
-		
+
 		enableAllButtons();
 
 		$('#DownloadsEdit_GeneralTab').show();
 		$('#DownloadsEdit_ParamTab').hide();
+		$('#DownloadsEdit_ServStatsTab').hide();
 		$('#DownloadsEdit_LogTab').hide();
 		$('#DownloadsEdit_FileTab').hide();
 		$('#DownloadsEdit_DupeTab').hide();
 		$('#DownloadsEdit_Back').hide();
 		$('#DownloadsEdit_BackSpace').show();
 		$DownloadsEditDialog.restoreTab();
-		
+
 		$('#DownloadsEdit_FileTable_filter').val('');
 		$('#DownloadsEdit_LogTable_filter').val('');
 		$('#DownloadsEdit_LogTable_pagerBlock').hide();
@@ -258,6 +293,14 @@ var DownloadsEditDialog = (new function($)
 		files = null;
 		logFilled = false;
 		notification = null;
+		oldCategory = curGroup.Category;
+
+		if (area === 'backup')
+		{
+			showing = true;
+			$('#DownloadsEdit_ServStats').trigger('click');
+		}
+		showing = false;
 
 		$DownloadsEditDialog.modal({backdrop: 'static'});
 	}
@@ -272,20 +315,20 @@ var DownloadsEditDialog = (new function($)
 			notification = null;
 		}
 	}
-	
+
 	function tabClick(e)
 	{
 		e.preventDefault();
 
-		$('#DownloadsEdit_Back').fadeIn(500);
+		$('#DownloadsEdit_Back').fadeIn(showing ? 0 : 500);
 		$('#DownloadsEdit_BackSpace').hide();
 		var tab = '#' + $(this).attr('data-tab');
 		lastPage = $(tab);
 		lastFullscreen = ($(this).attr('data-fullscreen') === 'true') && !UISettings.miniTheme;
-		
+
 		$('#DownloadsEdit_FileBlock').removeClass('modal-inner-scroll');
 		$('#DownloadsEdit_FileBlock').css('top', '');
-		
+
 		if (UISettings.miniTheme && files === null)
 		{
 			$('#DownloadsEdit_FileBlock').css('min-height', $DownloadsEditDialog.height());
@@ -295,9 +338,9 @@ var DownloadsEditDialog = (new function($)
 		{
 			$('#DownloadsEdit_LogBlock').css('min-height', $DownloadsEditDialog.height());
 		}
-		
-		$DownloadsEditDialog.switchTab($('#DownloadsEdit_GeneralTab'), lastPage, 
-			e.shiftKey || !UISettings.slideAnimation ? 0 : 500, 
+
+		$DownloadsEditDialog.switchTab($('#DownloadsEdit_GeneralTab'), lastPage,
+			e.shiftKey || !UISettings.slideAnimation || showing ? 0 : 500,
 			{fullscreen: lastFullscreen, mini: UISettings.miniTheme, complete: function()
 				{
 					if (!UISettings.miniTheme)
@@ -312,8 +355,8 @@ var DownloadsEditDialog = (new function($)
 					}
 				}});
 
-		if (tab === '#DownloadsEdit_LogTab' && !logFilled && curGroup.post && 
-			curGroup.post.Log && curGroup.post.Log.length > 0)
+		if (tab === '#DownloadsEdit_LogTab' && !logFilled && curGroup.postprocess &&
+			curGroup.Log && curGroup.Log.length > 0)
 		{
 			fillLog();
 		}
@@ -321,6 +364,11 @@ var DownloadsEditDialog = (new function($)
 		if (tab === '#DownloadsEdit_FileTab' && files === null)
 		{
 			fillFiles();
+		}
+
+		if (tab === '#DownloadsEdit_ServStatsTab')
+		{
+			scheduleRefresh();
 		}
 	}
 
@@ -334,10 +382,12 @@ var DownloadsEditDialog = (new function($)
 
 		$('#DownloadsEdit_FileBlock').removeClass('modal-inner-scroll');
 		$('#DownloadsEdit_FileBlock').css('top', '');
-		
-		$DownloadsEditDialog.switchTab(lastPage, $('#DownloadsEdit_GeneralTab'), 
+
+		$DownloadsEditDialog.switchTab(lastPage, $('#DownloadsEdit_GeneralTab'),
 			e.shiftKey || !UISettings.slideAnimation ? 0 : 500,
 			{fullscreen: lastFullscreen, mini: UISettings.miniTheme, back: true});
+
+		clearTimeout(refreshTimer);
 	}
 
 	function disableAllButtons()
@@ -367,7 +417,7 @@ var DownloadsEditDialog = (new function($)
 	{
 		var name = $('#DownloadsEdit_NZBName').val();
 		name !== curGroup.NZBName && !curGroup.postprocess ?
-			RPC.call('editqueue', ['GroupSetName', 0, name, [curGroup.LastID]], function()
+			RPC.call('editqueue', ['GroupSetName', 0, name, [curGroup.NZBID]], function()
 			{
 				notification = '#Notif_Downloads_Saved';
 				savePriority();
@@ -378,8 +428,8 @@ var DownloadsEditDialog = (new function($)
 	function savePriority()
 	{
 		var priority = parseInt($('#DownloadsEdit_Priority').val());
-		priority !== curGroup.MaxPriority && curGroup.LastID > 0 ?
-			RPC.call('editqueue', ['GroupSetPriority', 0, ''+priority, [curGroup.LastID]], function()
+		priority !== curGroup.MaxPriority ?
+			RPC.call('editqueue', ['GroupSetPriority', 0, ''+priority, [curGroup.NZBID]], function()
 			{
 				notification = '#Notif_Downloads_Saved';
 				saveCategory();
@@ -390,8 +440,8 @@ var DownloadsEditDialog = (new function($)
 	function saveCategory()
 	{
 		var category = $('#DownloadsEdit_Category').val();
-		category !== curGroup.Category && curGroup.LastID > 0	?
-			RPC.call('editqueue', ['GroupSetCategory', 0, category, [curGroup.LastID]], function()
+		category !== curGroup.Category ?
+			RPC.call('editqueue', ['GroupSetCategory', 0, category, [curGroup.NZBID]], function()
 			{
 				notification = '#Notif_Downloads_Saved';
 				saveDupeKey();
@@ -404,7 +454,7 @@ var DownloadsEditDialog = (new function($)
 		e.preventDefault();
 		disableAllButtons();
 		notification = '#Notif_Downloads_Paused';
-		RPC.call('editqueue', ['GroupPause', 0, '', [curGroup.LastID]], completed);
+		RPC.call('editqueue', ['GroupPause', 0, '', [curGroup.NZBID]], completed);
 	}
 
 	function itemResume(e)
@@ -412,7 +462,7 @@ var DownloadsEditDialog = (new function($)
 		e.preventDefault();
 		disableAllButtons();
 		notification = '#Notif_Downloads_Resumed';
-		RPC.call('editqueue', ['GroupResume', 0, '', [curGroup.LastID]], function()
+		RPC.call('editqueue', ['GroupResume', 0, '', [curGroup.NZBID]], function()
 		{
 			if (Options.option('ParCheck') === 'force')
 			{
@@ -420,7 +470,7 @@ var DownloadsEditDialog = (new function($)
 			}
 			else
 			{
-				RPC.call('editqueue', ['GroupPauseExtraPars', 0, '', [curGroup.LastID]], completed);
+				RPC.call('editqueue', ['GroupPauseExtraPars', 0, '', [curGroup.NZBID]], completed);
 			}
 		});
 	}
@@ -428,14 +478,14 @@ var DownloadsEditDialog = (new function($)
 	function itemDelete(e)
 	{
 		e.preventDefault();
-		DownloadsUI.deleteConfirm(doItemDelete, false);
+		DownloadsUI.deleteConfirm(doItemDelete, false, curGroup.Kind === 'NZB', curGroup.Kind === 'URL');
 	}
 
 	function doItemDelete(command)
 	{
 		disableAllButtons();
 		notification = '#Notif_Downloads_Deleted';
-		RPC.call('editqueue', [command, 0, '', [curGroup.LastID]], completed);
+		RPC.call('editqueue', [command, 0, '', [curGroup.NZBID]], completed);
 	}
 
 	function itemCancelPP(e)
@@ -446,12 +496,12 @@ var DownloadsEditDialog = (new function($)
 
 		var postDelete = function()
 		{
-			RPC.call('editqueue', ['PostDelete', 0, '', [curGroup.post.ID]], completed);
+			RPC.call('editqueue', ['PostDelete', 0, '', [curGroup.NZBID]], completed);
 		};
 
-		if (curGroup.LastID > 0)
+		if (curGroup.NZBID > 0)
 		{
-			RPC.call('editqueue', ['GroupDelete', 0, '', [curGroup.LastID]], postDelete);
+			RPC.call('editqueue', ['GroupDelete', 0, '', [curGroup.NZBID]], postDelete);
 		}
 		else
 		{
@@ -459,10 +509,23 @@ var DownloadsEditDialog = (new function($)
 		}
 	}
 
+	function categoryChange()
+	{
+		var category = $('#DownloadsEdit_Category').val();
+		ParamTab.reassignParams(postParams, oldCategory, category);
+		oldCategory = category;
+	}
+	
 	/*** TAB: POST-PROCESSING PARAMETERS **************************************************/
 
 	function saveParam()
 	{
+		if (curGroup.Kind === 'URL')
+		{
+			completed();
+			return;
+		}
+
 		var paramList = ParamTab.prepareParamRequest(postParams);
 		saveNextParam(paramList);
 	}
@@ -471,7 +534,7 @@ var DownloadsEditDialog = (new function($)
 	{
 		if (paramList.length > 0)
 		{
-			RPC.call('editqueue', ['GroupSetParameter', 0, paramList[0], [curGroup.LastID]], function()
+			RPC.call('editqueue', ['GroupSetParameter', 0, paramList[0], [curGroup.NZBID]], function()
 			{
 				notification = '#Notif_Downloads_Saved';
 				paramList.shift();
@@ -490,7 +553,7 @@ var DownloadsEditDialog = (new function($)
 	{
 		var value = $('#DownloadsEdit_DupeKey').val();
 		value !== curGroup.DupeKey ?
-			RPC.call('editqueue', ['GroupSetDupeKey', 0, value, [curGroup.LastID]], function()
+			RPC.call('editqueue', ['GroupSetDupeKey', 0, value, [curGroup.NZBID]], function()
 			{
 				notification = '#Notif_Downloads_Saved';
 				saveDupeScore();
@@ -502,19 +565,19 @@ var DownloadsEditDialog = (new function($)
 	{
 		var value = $('#DownloadsEdit_DupeScore').val();
 		value != curGroup.DupeScore ?
-			RPC.call('editqueue', ['GroupSetDupeScore', 0, value, [curGroup.LastID]], function()
+			RPC.call('editqueue', ['GroupSetDupeScore', 0, value, [curGroup.NZBID]], function()
 			{
 				notification = '#Notif_Downloads_Saved';
 				saveDupeMode();
 			})
 			:saveDupeMode();
 	}
-	
+
 	function saveDupeMode()
 	{
 		var value = $('#DownloadsEdit_DupeMode').val();
 		value !== curGroup.DupeMode ?
-			RPC.call('editqueue', ['GroupSetDupeMode', 0, value, [curGroup.LastID]], function()
+			RPC.call('editqueue', ['GroupSetDupeMode', 0, value, [curGroup.NZBID]], function()
 			{
 				notification = '#Notif_Downloads_Saved';
 				saveParam();
@@ -529,9 +592,9 @@ var DownloadsEditDialog = (new function($)
 		logFilled = true;
 		var data = [];
 
-		for (var i=0; i < curGroup.post.Log.length; i++)
+		for (var i=0; i < curGroup.Log.length; i++)
 		{
-			var message = curGroup.post.Log[i];
+			var message = curGroup.Log[i];
 
 			var kind;
 			switch (message.Kind)
@@ -556,7 +619,7 @@ var DownloadsEditDialog = (new function($)
 				var info = kind + ' <span class="label">' + time + '</span> ' + text;
 				fields = [info];
 			}
-			
+
 			var item =
 			{
 				id: message,
@@ -604,13 +667,13 @@ var DownloadsEditDialog = (new function($)
 			{
 				file.status = file.Paused ? (file.ActiveDownloads > 0 ? 'pausing' : 'paused') : (file.ActiveDownloads > 0 ? 'downloading' : 'queued');
 			}
-			
+
 			var age = Util.formatAge(file.PostTime + UISettings.timeZoneCorrection*60*60);
 			var size = Util.formatSizeMB(0, file.FileSizeLo);
 			if (file.FileSizeLo !== file.RemainingSizeLo)
 			{
 				size = '(' + Util.round0(file.RemainingSizeLo / file.FileSizeLo * 100) + '%) ' + size;
-			}	
+			}
 
 			var status;
 			switch (file.status)
@@ -622,34 +685,28 @@ var DownloadsEditDialog = (new function($)
 				case 'deleted': status = '<span class="label label-status label-important">deleted</span>'; break;
 				default: status = '<span class="label label-status label-important">internal error(' + file.status + ')</span>';
 			}
-			
-			var priority = '';
-			if (file.Priority != curGroup.MaxPriority)
-			{
-				priority = DownloadsUI.buildPriority(file.Priority);
-			}
 
 			var name = Util.textToHtml(file.Filename);
 			var fields;
 
 			if (!UISettings.miniTheme)
 			{
-				var info = name + ' ' + priority;
+				var info = name;
 				fields = ['<div class="check img-check"></div>', status, info, age, size];
 			}
 			else
 			{
 				var info = '<div class="check img-check"></div><span class="row-title">' + name + '</span>' +
-					' ' + (file.status === 'queued' ? '' : status) + ' ' + priority;
+					' ' + (file.status === 'queued' ? '' : status);
 				fields = [info];
 			}
-			
+
 			var item =
 			{
 				id: file.ID,
 				file: file,
 				fields: fields,
-				search: file.status + ' ' + file.Filename + ' ' + priority + ' ' + age + ' ' + size
+				search: file.status + ' ' + file.Filename + ' ' + age + ' ' + size
 			};
 
 			data.push(item);
@@ -689,7 +746,7 @@ var DownloadsEditDialog = (new function($)
 
 		var editIDList = [];
 		var splitError = false;
-		
+
 		for (var i = 0; i < files.length; i++)
 		{
 			var n = i;
@@ -699,11 +756,11 @@ var DownloadsEditDialog = (new function($)
 				n = files.length-1-i;
 			}
 			var file = files[n];
-			
+
 			if (checkedRows.indexOf(file.ID) > -1)
 			{
 				editIDList.push(file.ID);
-				
+
 				switch (action)
 				{
 					case 'pause':
@@ -765,7 +822,7 @@ var DownloadsEditDialog = (new function($)
 				}
 			}
 		}
-	
+
 		if (action === 'split')
 		{
 			if (splitError)
@@ -777,7 +834,7 @@ var DownloadsEditDialog = (new function($)
 				DownloadsSplitDialog.showModal(curGroup, editIDList);
 			}
 		}
-	
+
 		filesLoaded(files);
 	}
 
@@ -788,7 +845,7 @@ var DownloadsEditDialog = (new function($)
 			saveFileOrder();
 			return;
 		}
-		
+
 		var action = actions.shift();
 		var command = commands.shift();
 
@@ -837,7 +894,7 @@ var DownloadsEditDialog = (new function($)
 			IDs.push(file.ID);
 			hasMovedFiles |= file.editMoved;
 		}
-		
+
 		if (hasMovedFiles)
 		{
 			RPC.call('editqueue', ['FileReorder', 0, '', IDs], function()
@@ -849,6 +906,33 @@ var DownloadsEditDialog = (new function($)
 		else
 		{
 			completed();
+		}
+	}
+
+	/*** TAB: PER-SERVER STATUSTICS *****************************************************************/
+
+	function scheduleRefresh()
+	{
+		refreshTimer = setTimeout(updateServStats, UISettings.refreshInterval * 1000);
+	}
+
+	function updateServStats()
+	{
+		RPC.call('listgroups', [], groups_loaded);
+	}
+
+	function groups_loaded(groups)
+	{
+		for (var i=0, il=groups.length; i < il; i++)
+		{
+			var group = groups[i];
+			if (group.NZBID === curGroup.NZBID)
+			{
+				curGroup.ServerStats = group.ServerStats;
+				EditUI.fillServStats($ServStatsTable, group);
+				scheduleRefresh();
+				break;
+			}
 		}
 	}
 }(jQuery));
@@ -864,7 +948,7 @@ var EditUI = (new function($)
 	{
 		$('.' + prefix).hide();
 		var hasItems = false;
-		
+
 		for (var i=0; i < parameters.length; i++)
 		{
 			var param = parameters[i];
@@ -880,8 +964,61 @@ var EditUI = (new function($)
 				}
 			}
 		}
-		
+
 		Util.show('#' + prefix + '_Section', hasItems);
+	}
+
+	/*** TAB: SERVER STATISTICS **************************************************/
+
+	this.fillServStats = function(table, editItem)
+	{
+		var data = [];
+		for (var i=0; i < Status.status.NewsServers.length; i++)
+		{
+			var server = Status.status.NewsServers[i];
+			var name = Options.option('Server' + server.ID + '.Name');
+			if (name === null || name === '')
+			{
+				var host = Options.option('Server' + server.ID + '.Host');
+				var port = Options.option('Server' + server.ID + '.Port');
+				name = (host === null ? '' : host) + ':' + (port === null ? '119' : port);
+			}
+
+			var articles = '--';
+			var artquota = '--';
+			var success = '--';
+			var failures = '--';
+			for (var j=0; j < editItem.ServerStats.length; j++)
+			{
+				var stat = editItem.ServerStats[j];
+				if (stat.ServerID === server.ID && stat.SuccessArticles + stat.FailedArticles > 0)
+				{
+					articles = stat.SuccessArticles + stat.FailedArticles;
+					artquota = Util.round0(articles * 100.0 / (editItem.SuccessArticles + editItem.FailedArticles)) + '%';
+					success = Util.round0(stat.SuccessArticles * 100.0 / articles) + '%';
+					failures = Util.round0(stat.FailedArticles * 100.0 / articles) + '%';
+					break;
+				}
+			}
+
+			var fields = [server.ID + '. ' + name, articles, artquota, success, failures];
+			var item =
+			{
+				id: server.ID,
+				fields: fields,
+				search: ''
+			};
+			data.push(item);
+		}
+		table.fasttable('update', data);
+	}
+
+	this.servStatsTableRenderCellCallback = function (cell, index, item)
+	{
+		if (index > 0)
+		{
+			cell.className = 'text-right';
+		}
 	}
 }(jQuery));
 
@@ -923,21 +1060,21 @@ var ParamTab = (new function($)
 		defineBuiltinParams(postParamConfig);
 		return postParamConfig;
 	}
-	
+
 	function defineBuiltinParams(postParamConfig)
 	{
 	    if (postParamConfig.length == 0)
 	    {
 	        postParamConfig.push({category: 'P', postparam: true, options: []});
 	    }
-	    
+
 		if (!Options.findOption(postParamConfig[0].options, '*Unpack:'))
 		{
 			postParamConfig[0].options.unshift({name: '*Unpack:Password', value: '', defvalue: '', select: [], caption: 'Password', sectionId: '_Unpack_', description: 'Unpack-password for encrypted archives.'});
 			postParamConfig[0].options.unshift({name: '*Unpack:', value: '', defvalue: 'yes', select: ['yes', 'no'], caption: 'Unpack', sectionId: '_Unpack_', description: 'Unpack rar and 7-zip archives.'});
 		}
 	}
-	
+
 	this.prepareParamRequest = function(postParams)
 	{
 		var request = [];
@@ -961,6 +1098,65 @@ var ParamTab = (new function($)
 		}
 		return request;
 	}
+
+	function buildCategoryScriptList(category)
+	{
+		var scriptList = [];
+
+		for (var i=0; i < Options.categories.length; i++)
+		{
+			if (category === Options.categories[i])
+			{
+				scriptList = Util.parseCommaList(Options.option('Category' + (i + 1) + '.PostScript'));
+				if (scriptList.length === 0)
+				{
+					scriptList = Util.parseCommaList(Options.option('PostScript'));
+				}
+				if (Options.option('Category' + (i + 1) + '.Unpack') === 'yes')
+				{
+					scriptList.push('*Unpack');
+				}
+				return scriptList;
+			}
+		}
+		
+		// empty category or category not found
+		scriptList = Util.parseCommaList(Options.option('PostScript'));
+		if (Options.option('Unpack') === 'yes')
+		{
+			scriptList.push('*Unpack');
+		}
+		return scriptList;
+	}
+	
+	this.reassignParams = function(postParams, oldCategory, newCategory)
+	{
+		var oldScriptList = buildCategoryScriptList(oldCategory);
+		var newScriptList = buildCategoryScriptList(newCategory);
+
+		for (var i=0; i < postParams.length; i++)
+		{
+			var section = postParams[i];
+			for (var j=0; j < section.options.length; j++)
+			{
+				var option = section.options[j];
+				if (!option.template && !section.hidden && option.name.substr(option.name.length - 1, 1) === ':')
+				{
+					console.log(option.name);
+					var scriptName = option.name.substr(0, option.name.length-1);
+					if (oldScriptList.indexOf(scriptName) > -1 && newScriptList.indexOf(scriptName) === -1)
+					{
+						Config.setOptionValue(option, 'no');
+					}
+					else if (oldScriptList.indexOf(scriptName) === -1 && newScriptList.indexOf(scriptName) > -1)
+					{
+						Config.setOptionValue(option, 'yes');
+					}
+				}
+			}
+		}
+	}
+
 }(jQuery));
 
 
@@ -972,17 +1168,17 @@ var DownloadsMultiDialog = (new function($)
 
 	// Controls
 	var $DownloadsMultiDialog;
-	
+
 	// State
 	var multiIDList;
 	var notification = null;
 	var oldPriority;
 	var oldCategory;
-	
+
 	this.init = function()
 	{
 		$DownloadsMultiDialog = $('#DownloadsMultiDialog');
-		
+
 		$('#DownloadsMulti_Save').click(saveChanges);
 
 		$DownloadsMultiDialog.on('hidden', function ()
@@ -1013,7 +1209,7 @@ var DownloadsMultiDialog = (new function($)
 			if (nzbIdList.indexOf(gr.NZBID) > -1)
 			{
 				groups.push(gr);
-				multiIDList.push(gr.LastID);
+				multiIDList.push(gr.NZBID);
 			}
 		}
 		if (groups.length == 0)
@@ -1044,7 +1240,7 @@ var DownloadsMultiDialog = (new function($)
 			FileCount += group.FileCount;
 			RemainingFileCount += group.RemainingFileCount;
 			RemainingParCount += group.RemainingParCount;
-			paused = paused && group.paused;
+			paused = paused && group.Status === 'PAUSED';
 			PriorityDiff = PriorityDiff || (Priority !== group.MaxPriority);
 			CategoryDiff = CategoryDiff || (Category !== group.Category);
 		}
@@ -1095,12 +1291,12 @@ var DownloadsMultiDialog = (new function($)
 			v.append('<option selected="selected">&lt;multiple values&gt;</option>');
 		}
 		oldCategory = v.val();
-		
+
 		enableAllButtons();
 		$('#DownloadsMulti_GeneralTabLink').tab('show');
 
 		notification = null;
-		
+
 		$DownloadsMultiDialog.modal({backdrop: 'static'});
 	}
 
@@ -1142,14 +1338,14 @@ var DownloadsMultiDialog = (new function($)
 	{
 		var category = $('#DownloadsMulti_Category').val();
 		(category !== oldCategory && category !== '<multiple values>') ?
-			RPC.call('editqueue', ['GroupSetCategory', 0, category, multiIDList], function()
+			RPC.call('editqueue', ['GroupApplyCategory', 0, category, multiIDList], function()
 			{
 				notification = '#Notif_Downloads_Saved';
 				completed();
 			})
 			: completed();
 	}
-	
+
 	function completed()
 	{
 		$DownloadsMultiDialog.modal('hide');
@@ -1170,14 +1366,14 @@ var DownloadsMergeDialog = (new function($)
 
 	// Controls
 	var $DownloadsMergeDialog;
-	
+
 	// State
 	var mergeEditIDList;
 
 	this.init = function()
 	{
 		$DownloadsMergeDialog = $('#DownloadsMergeDialog');
-		
+
 		$('#DownloadsMerge_Merge').click(merge);
 
 		$DownloadsMergeDialog.on('hidden', function ()
@@ -1205,7 +1401,7 @@ var DownloadsMergeDialog = (new function($)
 			var group = allGroups[i];
 			if (nzbIdList.indexOf(group.NZBID) > -1)
 			{
-				mergeEditIDList.push(group.LastID);
+				mergeEditIDList.push(group.NZBID);
 				var html = '<table><tr><td width="18px" valign="top"><i class="icon-file" style="vertical-align:top;margin-top:2px;"></i></td><td>' +
 					Util.formatNZBName(group.NZBName) + '</td></tr></table>';
 				$('#DownloadsMerge_Files').append(html);
@@ -1237,14 +1433,14 @@ var DownloadsSplitDialog = (new function($)
 
 	// Controls
 	var $DownloadsSplitDialog;
-	
+
 	// State
 	var splitEditIDList;
 
 	this.init = function()
 	{
 		$DownloadsSplitDialog = $('#DownloadsSplitDialog');
-		
+
 		$('#DownloadsSplit_Split').click(split);
 
 		$DownloadsSplitDialog.on('hidden', function ()
@@ -1319,7 +1515,7 @@ var HistoryEditDialog = (new function()
 		$('#HistoryEdit_Back').click(backClick);
 		$('#HistoryEdit_MarkGood').click(itemGood);
 		$('#HistoryEdit_MarkBad').click(itemBad);
-		
+
 		$ServStatsTable = $('#HistoryEdit_ServStatsTable');
 		$ServStatsTable.fasttable(
 			{
@@ -1328,16 +1524,16 @@ var HistoryEditDialog = (new function()
 				pageSize: 100,
 				maxPages: 3,
 				hasHeader: true,
-				renderCellCallback: servStatsTableRenderCellCallback
+				renderCellCallback: EditUI.servStatsTableRenderCellCallback
 			});
-		
+
 		$HistoryEditDialog.on('hidden', function ()
 		{
 			$HistoryEdit_ParamData.empty();
 			// resume updates
 			Refresher.resume();
 		});
-		
+
 		TabDialog.extend($HistoryEditDialog);
 	}
 
@@ -1350,59 +1546,63 @@ var HistoryEditDialog = (new function()
 		var status;
 		if (hist.Kind === 'NZB')
 		{
-			status = '<span class="label label-status ' + 
+			status = '<span class="label label-status ' +
 				(hist.Health === 1000 ? 'label-success' : hist.Health >= hist.CriticalHealth ? 'label-warning' : 'label-important') +
 				'">health: ' + Math.floor(hist.Health / 10) + '%</span>';
 
 			if (hist.MarkStatus !== 'NONE')
 			{
-				status += ' ' + HistoryUI.buildStatus(hist.MarkStatus, 'Mark: ');
+				status += ' ' + buildStatus(hist.MarkStatus, 'Mark: ');
 			}
-			
+
 			if (hist.DeleteStatus === 'NONE')
 			{
-				status += ' ' + HistoryUI.buildStatus(hist.ParStatus, 'Par: ') +
-					' ' + (Options.option('Unpack') == 'yes' || hist.UnpackStatus != 'NONE' ? HistoryUI.buildStatus(hist.UnpackStatus, 'Unpack: ') : '')  +
-					' ' + (hist.MoveStatus === "FAILURE" ? HistoryUI.buildStatus(hist.MoveStatus, 'Move: ') : '');
+				status += ' ' + buildStatus(hist.ParStatus, 'Par: ') +
+					' ' + (Options.option('Unpack') == 'yes' || hist.UnpackStatus != 'NONE' ? buildStatus(hist.UnpackStatus, 'Unpack: ') : '')  +
+					' ' + (hist.MoveStatus === "FAILURE" ? buildStatus(hist.MoveStatus, 'Move: ') : '');
 			}
 			else
 			{
-				status += ' ' + HistoryUI.buildStatus('edit-deleted-' + hist.DeleteStatus, 'Delete: ');
+				status += ' ' + buildStatus('DELETED-' + hist.DeleteStatus, 'Delete: ');
 			}
-			
+
 			for (var i=0; i<hist.ScriptStatuses.length; i++)
 			{
 				var scriptStatus = hist.ScriptStatuses[i];
-				status += ' ' + HistoryUI.buildStatus(scriptStatus.Status, Options.shortScriptName(scriptStatus.Name) + ': ') + ' ';
+				status += ' ' + buildStatus(scriptStatus.Status, Options.shortScriptName(scriptStatus.Name) + ': ') + ' ';
 			}
 		}
 		else if (hist.Kind === 'URL')
 		{
-			if (hist.UrlStatus == 'SCAN_SKIPPED')
+			if (hist.DeleteStatus !== 'NONE')
 			{
-				status = HistoryUI.buildStatus('SUCCESS', 'Download: ') + ' ' +
-					HistoryUI.buildStatus('SCAN_SKIPPED', 'Scan: ');
+				status = buildStatus('DELETED-' + hist.DeleteStatus, 'Delete: ');
+			}
+			else if (hist.UrlStatus == 'SCAN_SKIPPED')
+			{
+				status = buildStatus('SUCCESS', 'Fetch: ') + ' ' +
+					buildStatus('SCAN_SKIPPED', 'Scan: ');
 			}
 			else if (hist.UrlStatus == 'SCAN_FAILURE')
 			{
-				status = HistoryUI.buildStatus('SUCCESS', 'Download: ') + ' ' +
-					HistoryUI.buildStatus('FAILURE', 'Scan: ');
+				status = buildStatus('SUCCESS', 'Fetch: ') + ' ' +
+					buildStatus('FAILURE', 'Scan: ');
 			}
 			else
 			{
-				status = HistoryUI.buildStatus(hist.status, 'Download: ');
+				status = buildStatus(hist.UrlStatus, 'Fetch: ');
 			}
 		}
 		else if (hist.Kind === 'DUP')
 		{
-			status = HistoryUI.buildStatus(hist.status, '');
+			status = buildStatus(hist.DupStatus, '');
 		}
 		$('#HistoryEdit_Status').html(status);
 
 		$('#HistoryEdit_Title').text(Util.formatNZBName(hist.Name));
 		if (hist.Kind !== 'NZB')
 		{
-			$('#HistoryEdit_Title').html($('#HistoryEdit_Title').html() + '&nbsp;' + '<span class="label label-info">' + 
+			$('#HistoryEdit_Title').html($('#HistoryEdit_Title').html() + '&nbsp;' + '<span class="label label-info">' +
 				(hist.Kind === 'DUP' ? 'hidden' : hist.Kind) + '</span>');
 		}
 
@@ -1421,27 +1621,25 @@ var HistoryEditDialog = (new function()
 			var table = '';
 			table += '<tr><td>Total</td><td class="text-right">' + size + '</td></tr>';
 			table += '<tr><td>Files (total/parked)</td><td class="text-center">' + hist.FileCount + ' / ' + hist.RemainingFileCount + '</td></tr>';
-			table += '<tr><td>Articles (total/completion)</td><td class="text-center">' + 
-				(hist.ServerStats.length > 0 ? '<a href="#" id="HistoryEdit_ServStat" data-tab="HistoryEdit_ServStatsTab" title="Per-server statistics">' : '') +
-				hist.TotalArticles + ' / ' + completion + 
+			table += '<tr><td>' +
+				(hist.ServerStats.length > 0 ? '<a href="#" id="HistoryEdit_ServStats" data-tab="HistoryEdit_ServStatsTab" title="Per-server statistics">' : '') +
+				'Articles (total/completion)' +
 				(hist.ServerStats.length > 0 ? ' <i class="icon-forward" style="opacity:0.6;"></i></a>' : '') +
-				'</td></tr>';
+				'</td><td class="text-center">' + hist.TotalArticles + ' / ' + completion + '</td></tr>';
 			$('#HistoryEdit_Statistics').html(table);
-			$('#HistoryEdit_ServStat').click(tabClick);
-			fillServStats();
+			$('#HistoryEdit_ServStats').click(tabClick);
+			EditUI.fillServStats($ServStatsTable, hist);
+			$ServStatsTable.fasttable('setCurPage', 1);
 		}
 
-		if (hist.Kind !== 'URL')
-		{
-			$('#HistoryEdit_DupeKey').val(hist.DupeKey);
-			$('#HistoryEdit_DupeScore').val(hist.DupeScore);
-			$('#HistoryEdit_DupeMode').val(hist.DupeMode);
-			$('#HistoryEdit_DupeBackup').prop('checked', hist.DeleteStatus === 'DUPE');
-			$('#HistoryEdit_DupeBackup').prop('disabled', !(hist.DeleteStatus === 'DUPE' || hist.DeleteStatus === 'MANUAL'));
-		}
+		$('#HistoryEdit_DupeKey').val(hist.DupeKey);
+		$('#HistoryEdit_DupeScore').val(hist.DupeScore);
+		$('#HistoryEdit_DupeMode').val(hist.DupeMode);
+		$('#HistoryEdit_DupeBackup').prop('checked', hist.DeleteStatus === 'DUPE');
+		$('#HistoryEdit_DupeBackup').prop('disabled', !(hist.DeleteStatus === 'DUPE' || hist.DeleteStatus === 'MANUAL'));
 		Util.show($('#HistoryEdit_DupeBackup').closest('.control-group'), hist.Kind === 'NZB');
 		$('#HistoryEdit_DupeMode').closest('.control-group').toggleClass('last-group', hist.Kind !== 'NZB');
-		
+
 		Util.show('#HistoryEdit_Return', hist.RemainingFileCount > 0);
 		Util.show('#HistoryEdit_ReturnURL', hist.Kind === 'URL');
 		Util.show('#HistoryEdit_Redownload', hist.Kind === 'NZB');
@@ -1451,22 +1649,25 @@ var HistoryEditDialog = (new function()
 		var dupeCheck = Options.option('DupeCheck') === 'yes';
 		Util.show('#HistoryEdit_MarkGood', dupeCheck && ((hist.Kind === 'NZB' && hist.MarkStatus !== 'GOOD') || (hist.Kind === 'DUP' && hist.DupStatus !== 'GOOD')));
 		Util.show('#HistoryEdit_MarkBad', dupeCheck && hist.Kind !== 'URL');
-		Util.show('#HistoryEdit_Dupe', dupeCheck && hist.Kind !== 'URL');
+		Util.show('#HistoryEdit_Dupe', dupeCheck);
 		$('#HistoryEdit_CategoryGroup').toggleClass('control-group-last', hist.Kind === 'URL');
+
+		Util.show('#HistoryEdit_URLGroup', hist.Kind === 'URL');
+		$('#HistoryEdit_URL').attr('value', hist.URL);
 
 		var postParamConfig = ParamTab.createPostParamConfig();
 		var postParam = hist.Kind === 'NZB' && postParamConfig[0].options.length > 0;
 		Util.show('#HistoryEdit_Param', postParam);
-		
+
 		if (postParam)
 		{
 			postParams = ParamTab.buildPostParamTab($HistoryEdit_ParamData, postParamConfig, curHist.Parameters);
 		}
-		
+
 		EditUI.buildDNZBLinks(curHist.Parameters ? curHist.Parameters : [], 'HistoryEdit_DNZB');
 
 		enableAllButtons();
-		
+
 		$('#HistoryEdit_GeneralTab').show();
 		$('#HistoryEdit_ParamTab').hide();
 		$('#HistoryEdit_ServStatsTab').hide();
@@ -1474,12 +1675,44 @@ var HistoryEditDialog = (new function()
 		$('#HistoryEdit_Back').hide();
 		$('#HistoryEdit_BackSpace').show();
 		$HistoryEditDialog.restoreTab();
-		
+
 		notification = null;
-		
+
 		$HistoryEditDialog.modal({backdrop: 'static'});
 	}
 
+	function buildStatus(status, prefix)
+	{
+		switch (status)
+		{
+			case 'SUCCESS':
+			case 'GOOD':
+				return '<span class="label label-status label-success">' + prefix + status + '</span>';
+			case 'FAILURE':
+				return '<span class="label label-status label-important">' + prefix + 'failure</span>';
+			case 'BAD':
+				return '<span class="label label-status label-important">' + prefix + status + '</span>';
+			case 'REPAIR_POSSIBLE':
+				return '<span class="label label-status label-warning">' + prefix + 'repairable</span>';
+			case 'MANUAL': // PAR-MANUAL
+			case 'SPACE':
+			case 'PASSWORD':
+				return '<span class="label label-status label-warning">' + prefix + status + '</span>';
+			case 'DELETED-DUPE':
+				return '<span class="label label-status">' + prefix + 'dupe</span>';
+			case 'DELETED-MANUAL':
+				return '<span class="label label-status">' + prefix + 'manual</span>';
+			case 'DELETED-HEALTH':
+				return '<span class="label label-status label-important">' + prefix + 'health</span>';
+			case 'SCAN_SKIPPED':
+				return '<span class="label label-status label-warning"">' + prefix + 'skipped</span>';
+			case 'NONE':
+				return '<span class="label label-status">' + prefix + 'none</span>';
+			default:
+				return '<span class="label label-status">' + prefix + status + '</span>';
+		}
+	}
+	
 	function tabClick(e)
 	{
 		e.preventDefault();
@@ -1489,9 +1722,9 @@ var HistoryEditDialog = (new function()
 		var tab = '#' + $(this).attr('data-tab');
 		lastPage = $(tab);
 		lastFullscreen = ($(this).attr('data-fullscreen') === 'true') && !UISettings.miniTheme;
-		
-		$HistoryEditDialog.switchTab($('#HistoryEdit_GeneralTab'), lastPage, 
-			e.shiftKey || !UISettings.slideAnimation ? 0 : 500, 
+
+		$HistoryEditDialog.switchTab($('#HistoryEdit_GeneralTab'), lastPage,
+			e.shiftKey || !UISettings.slideAnimation ? 0 : 500,
 			{fullscreen: lastFullscreen, mini: UISettings.miniTheme});
 	}
 
@@ -1503,7 +1736,7 @@ var HistoryEditDialog = (new function()
 			$('#HistoryEdit_BackSpace').show();
 		});
 
-		$HistoryEditDialog.switchTab(lastPage, $('#HistoryEdit_GeneralTab'), 
+		$HistoryEditDialog.switchTab(lastPage, $('#HistoryEdit_GeneralTab'),
 			e.shiftKey || !UISettings.slideAnimation ? 0 : 500,
 			{fullscreen: lastFullscreen, mini: UISettings.miniTheme, back: true});
 	}
@@ -1557,7 +1790,7 @@ var HistoryEditDialog = (new function()
 			doItemRedownload();
 		}
 	}
-	
+
 	function doItemRedownload()
 	{
 		disableAllButtons();
@@ -1578,7 +1811,7 @@ var HistoryEditDialog = (new function()
 		notification = '#Notif_History_Reproces';
 		RPC.call('editqueue', ['HistoryProcess', 0, '', [curHist.ID]], completed);
 	}
-	
+
 	function completed()
 	{
 		$HistoryEditDialog.modal('hide');
@@ -1589,7 +1822,7 @@ var HistoryEditDialog = (new function()
 			notification = null;
 		}
 	}
-	
+
 	function saveChanges(e)
 	{
 		e.preventDefault();
@@ -1598,26 +1831,26 @@ var HistoryEditDialog = (new function()
 		saveCompleted = completed;
 		saveDupeKey();
 	}
-	
+
 	function itemGood(e)
 	{
 		e.preventDefault();
 		ConfirmDialog.showModal('HistoryEditGoodConfirmDialog', doItemGood);
 	}
-	
+
 	function doItemGood()
 	{
 		disableAllButtons();
 		notification = '#Notif_History_Marked';
 		RPC.call('editqueue', ['HistoryMarkGood', 0, '', [curHist.ID]], completed);
 	}
-	
+
 	function itemBad(e)
 	{
 		e.preventDefault();
 		ConfirmDialog.showModal('HistoryEditBadConfirmDialog', doItemBad);
 	}
-	
+
 	function doItemBad()
 	{
 		disableAllButtons();
@@ -1629,12 +1862,12 @@ var HistoryEditDialog = (new function()
 
 	function saveParam()
 	{
-		if (curHist.Kind === 'DUP')
+		if (curHist.Kind !== 'NZB')
 		{
 			saveCompleted();
 			return;
 		}
-		
+
 		var paramList = ParamTab.prepareParamRequest(postParams);
 		saveNextParam(paramList);
 	}
@@ -1681,7 +1914,7 @@ var HistoryEditDialog = (new function()
 			})
 			:saveDupeMode();
 	}
-	
+
 	function saveDupeMode()
 	{
 		var value = $('#HistoryEdit_DupeMode').val();
@@ -1707,59 +1940,4 @@ var HistoryEditDialog = (new function()
 			})
 			:saveParam();
 	}
-	
-	/*** TAB: SERVER STATISTICS **************************************************/
-	
-	function fillServStats()
-	{
-		var data = [];
-		for (var i=0; i < Status.status.NewsServers.length; i++)
-		{
-			var server = Status.status.NewsServers[i];
-			var name = Options.option('Server' + server.ID + '.Name');
-			if (name === null || name === '')
-			{
-				var host = Options.option('Server' + server.ID + '.Host');
-				var port = Options.option('Server' + server.ID + '.Port');
-				name = (host === null ? '' : host) + ':' + (port === null ? '119' : port);
-			}
-
-			var articles = '--';
-			var artquota = '--';
-			var success = '--';
-			var failures = '--';
-			for (var j=0; j < curHist.ServerStats.length; j++)
-			{
-				var stat = curHist.ServerStats[j];
-				if (stat.ServerID === server.ID && stat.SuccessArticles + stat.FailedArticles > 0)
-				{
-					articles = stat.SuccessArticles + stat.FailedArticles;
-					artquota = Util.round0(articles * 100.0 / (curHist.SuccessArticles + curHist.FailedArticles)) + '%';
-					success = Util.round0(stat.SuccessArticles * 100.0 / articles) + '%';
-					failures = Util.round0(stat.FailedArticles * 100.0 / articles) + '%';
-					break;
-				}
-			}
-			
-			var fields = [server.ID + '. ' + name, articles, artquota, success, failures];
-			var item =
-			{
-				id: server.ID,
-				fields: fields,
-				search: ''
-			};
-			data.push(item);
-		}
-		$ServStatsTable.fasttable('update', data);
-		$ServStatsTable.fasttable('setCurPage', 1);
-	}
-
-	function servStatsTableRenderCellCallback(cell, index, item)
-	{
-		if (index > 0)
-		{
-			cell.className = 'text-right';
-		}
-	}
-	
 }(jQuery));
